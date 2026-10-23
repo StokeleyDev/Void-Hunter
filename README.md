@@ -3,7 +3,7 @@
 <h1 align="center">VOID HUNTER</h1>
 <p align="center"><b>Enter the sector. Build your ship. Survive the void.</b><br /><sub>A space survival game by Stokeley.</sub></p>
 
-<p align="center"><a href="#run-locally"><b>RUN LOCALLY</b></a> · <a href="https://github.com/StokeleyDev">CREATOR</a></p>
+<p align="center"><a href="#03--run-locally"><b>RUN LOCALLY</b></a> · <a href="https://github.com/StokeleyDev">CREATOR</a></p>
 
 ---
 
