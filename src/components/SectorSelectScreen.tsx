@@ -23,8 +23,8 @@ export default function SectorSelectScreen({
   onClose,
 }: SectorSelectScreenProps) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-md animate-fade-in overflow-y-auto">
-      <div className="relative w-full max-w-4xl bg-slate-950/90 border border-cyan-500/30 rounded-2xl p-5 sm:p-8 shadow-[0_0_50px_rgba(6,182,212,0.15)] text-slate-100 max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center vh-safe-area bg-black/85 backdrop-blur-md vh-fade-in overflow-y-auto">
+      <div className="relative w-full max-w-4xl vh-panel p-5 sm:p-7 text-slate-100 max-h-[92vh] flex flex-col shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-slate-800">
           <div>

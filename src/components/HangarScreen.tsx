@@ -89,24 +89,24 @@ export default function HangarScreen({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/90 backdrop-blur-md">
-      <div className="w-full max-w-2xl bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden bento-glow-indigo">
+    <div className="fixed inset-0 z-50 flex items-center justify-center vh-safe-area bg-zinc-950/85 backdrop-blur-md">
+      <div className="w-full max-w-2xl vh-panel vh-fade-in p-5 sm:p-6 shadow-2xl flex flex-col max-h-[88vh] overflow-hidden">
         {/* Hangar Header */}
-        <div className="flex justify-between items-center border-b border-zinc-800 pb-4 mb-4">
+        <div className="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
           <div>
-            <h2 className="text-2xl font-black tracking-widest text-zinc-100 font-sans">АНГАР ИСКАТЕЛЯ</h2>
-            <p className="text-xs text-zinc-400 mt-1 font-mono">ТВОЙ БАЛАНС: <span className="text-yellow-400 font-bold">{bankCredits} кр.</span></p>
+            <h2 className="text-xl sm:text-2xl font-black tracking-wider text-slate-100 font-sans">АНГАР ИСКАТЕЛЯ</h2>
+            <p className="text-xs text-slate-400 mt-0.5 font-mono">БАЛАНС: <span className="text-amber-400 font-bold">{bankCredits.toLocaleString()} кр.</span></p>
           </div>
           <button
             onClick={onClose}
-            className="w-10 h-10 border border-zinc-750 bg-zinc-800 hover:bg-zinc-700 hover:border-zinc-550 text-zinc-300 rounded-xl transition duration-150 flex items-center justify-center font-bold text-lg cursor-pointer"
+            className="w-9 h-9 border border-slate-700 bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl transition flex items-center justify-center font-bold text-base cursor-pointer"
           >
             ✕
           </button>
         </div>
 
         {/* Tab Selection */}
-        <div className="flex gap-2 p-1 bg-zinc-950 border border-zinc-850 rounded-xl mb-4">
+        <div className="flex gap-2 p-1 bg-slate-950/80 border border-slate-800 rounded-xl mb-4">
           <button
             onClick={() => setActiveTab('ships')}
             className={`flex-1 py-2.5 text-xs tracking-wider font-extrabold text-center uppercase rounded-lg transition-all cursor-pointer font-mono ${

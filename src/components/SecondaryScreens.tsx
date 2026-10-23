@@ -40,17 +40,17 @@ export default function SecondaryScreens({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-950/90 backdrop-blur-md">
-      <div className="w-full max-w-xl bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl flex flex-col max-h-[85vh] overflow-hidden bento-glow-indigo">
+    <div className="fixed inset-0 z-50 flex items-center justify-center vh-safe-area bg-zinc-950/85 backdrop-blur-md">
+      <div className="w-full max-w-xl vh-panel vh-fade-in p-5 sm:p-6 shadow-2xl flex flex-col max-h-[88vh] overflow-hidden">
         
         {/* Header Tabs Navigation */}
-        <div className="flex gap-1.5 p-1 bg-zinc-950 border border-zinc-850 rounded-xl mb-4">
+        <div className="flex gap-1.5 p-1 bg-slate-950/80 border border-slate-800 rounded-xl mb-4">
           <button
             onClick={() => setTab('leaderboard')}
             className={`flex-1 py-2 text-xs tracking-wider font-extrabold text-center uppercase rounded-lg transition duration-150 cursor-pointer font-mono ${
               tab === 'leaderboard'
-                ? 'bg-indigo-950/30 border border-indigo-500/40 text-indigo-450'
-                : 'bg-transparent text-zinc-500 hover:text-zinc-200'
+                ? 'bg-indigo-950/40 border border-indigo-500/40 text-indigo-300'
+                : 'bg-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
             🏆 Рекорды

@@ -5,7 +5,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    base: process.env.GITHUB_PAGES === 'true' ? '/VoidHunterUz/' : '/',
+    base: process.env.GITHUB_PAGES === 'true' ? '/Void-Hunter/' : '/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

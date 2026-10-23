@@ -9,6 +9,12 @@ set "PYTHON_CMD=python"
 set "LOG_FILE=%BOT_DIR%bot_log.txt"
 set "RETRY_DELAY=5"
 
+if "%BOT_TOKEN%"=="" (
+    echo [ERROR] BOT_TOKEN environment variable is required. Set it before starting the bot.
+    pause
+    exit /b 1
+)
+
 cd /d "%BOT_DIR%"
 
 echo ========================================

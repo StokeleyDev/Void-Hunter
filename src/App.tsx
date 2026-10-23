@@ -589,202 +589,210 @@ export default function App() {
 
       {/* Main menu Screen overlay */}
       {activeScreen === 'menu' && (
-        <div className="fixed inset-0 z-30 overflow-y-auto p-4 bg-zinc-950/90 backdrop-blur-md flex items-start justify-center md:items-center select-none antialiased">
-          <div className="w-full max-w-4xl bg-zinc-900 border border-zinc-800 rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col font-sans my-auto">
+        <div className="fixed inset-0 z-30 overflow-y-auto vh-safe-area bg-zinc-950/90 backdrop-blur-md flex items-start justify-center md:items-center select-none antialiased">
+          <div className="w-full max-w-5xl bg-slate-950/95 border border-slate-800 rounded-3xl p-4 sm:p-6 md:p-8 shadow-2xl flex flex-col font-sans my-auto gap-4">
             {/* Header Section */}
-            <header className="flex justify-between items-center mb-6 border-b border-zinc-800 pb-4">
+            <header className="flex justify-between items-center mb-4 sm:mb-6 border-b border-slate-800 pb-3 sm:pb-4 gap-2">
               <div>
-                <h1 className="text-2xl font-black tracking-tight text-white font-sans">
-                  VOID HUNTER <span className="text-zinc-500 font-mono text-sm ml-2">v1.4.0</span>
+                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white font-sans flex items-center gap-2">
+                  <span>VOID HUNTER</span>
+                  <span className="text-slate-400 font-mono text-xs px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 font-bold">v1.4.0</span>
                 </h1>
-                <p className="text-zinc-500 text-[10px] uppercase tracking-widest mt-1 font-mono">
+                <p className="text-slate-400 text-[10px] uppercase tracking-widest mt-0.5 font-mono">
                   АРКАДНЫЙ КОСМИЧЕСКИЙ ROGUELITE-ШУТЕР
                 </p>
               </div>
-              <div className="flex gap-2 sm:gap-3 items-center">
+              <div className="flex gap-1.5 sm:gap-2 items-center flex-shrink-0">
                 <button
                   onClick={() => setShowSettingsModal(true)}
-                  className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-2.5 sm:px-3 py-1.5 rounded-lg text-[10px] font-extrabold border border-zinc-700 transition uppercase tracking-widest cursor-pointer font-mono"
-                  title="Настройки визуальных эффектов и графики"
+                  className="bg-slate-800 hover:bg-slate-750 text-slate-200 px-2.5 sm:px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-700 transition uppercase tracking-wider cursor-pointer font-mono flex items-center gap-1"
+                  title="Настройки"
                 >
-                  ⚙️ НАСТРОЙКИ
+                  <span>⚙️</span>
+                  <span className="hidden sm:inline">НАСТРОЙКИ</span>
                 </button>
                 <button
                   onClick={handleMuteToggle}
-                  className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-2.5 sm:px-3 py-1.5 rounded-lg text-[10px] font-extrabold border border-zinc-700 transition uppercase tracking-widest cursor-pointer font-mono"
-                  title="Переключить звуковые эффекты"
+                  className="bg-slate-800 hover:bg-slate-750 text-slate-200 px-2 sm:px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-700 transition uppercase tracking-wider cursor-pointer font-mono flex items-center gap-1"
+                  title="Переключить SFX"
                 >
-                  {isMuted ? '🔇 SFX' : '🔊 SFX'}
+                  <span>{isMuted ? '🔇' : '🔊'}</span>
+                  <span className="hidden sm:inline">SFX</span>
                 </button>
                 <button
                   onClick={handleMusicToggle}
-                  className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 px-2.5 sm:px-3 py-1.5 rounded-lg text-[10px] font-extrabold border border-zinc-700 transition uppercase tracking-widest cursor-pointer font-mono"
-                  title="Переключить Synthwave музыку"
+                  className="bg-slate-800 hover:bg-slate-750 text-slate-200 px-2 sm:px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-700 transition uppercase tracking-wider cursor-pointer font-mono flex items-center gap-1"
+                  title="Переключить музыку"
                 >
-                  {isMusicMuted ? '🔇 МУЗЫКА' : '🎵 МУЗЫКА'}
+                  <span>{isMusicMuted ? '🔇' : '🎵'}</span>
+                  <span className="hidden sm:inline">МУЗЫКА</span>
                 </button>
               </div>
             </header>
 
-            {/* Bento Grid Content */}
-            <div className="grid grid-cols-12 gap-4 flex-grow">
+            {/* 3 Balanced Secondary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 flex-grow">
               
-              {/* Left Column: Active Hangar Details */}
-              <div className="col-span-12 md:col-span-4 bg-zinc-950 border border-zinc-800 rounded-2xl p-5 flex flex-col justify-between">
+              {/* Card 1: Hangar & Loadout */}
+              <div className="vh-panel p-4 sm:p-5 flex flex-col justify-between">
                 <div>
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-[10px] font-black uppercase tracking-wider text-indigo-400 font-mono">ТЕКУЩЕЕ СНАРЯЖЕНИЕ</h2>
-                    <span className="text-[9px] bg-zinc-900 px-2 py-0.5 rounded text-zinc-500 font-mono uppercase">АКТИВНО</span>
+                  <div className="flex justify-between items-center mb-3">
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">АНГАР И СНАРЯЖЕНИЕ</h2>
+                    <span className="text-[10px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded font-mono font-bold">ГОТОВ</span>
                   </div>
-                  
+
                   {/* Ship skin showcase */}
-                  <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-xl p-3 flex items-center gap-3 mb-3 hover:border-indigo-500/20 transition">
+                  <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3 flex items-center gap-3 mb-2.5">
                     <ShipIcon
                       skinId={selectedSkin}
                       size={44}
-                      className="rounded-xl border border-zinc-700/80 shadow-md flex-shrink-0"
+                      className="rounded-xl border border-slate-700/80 shadow flex-shrink-0"
                     />
-                    <div>
-                      <div className="text-[9px] text-zinc-500 uppercase font-mono tracking-wider">КОРПУС</div>
-                      <div className="text-sm font-bold text-zinc-200">{skins.find(s => s.id === selectedSkin)?.name || 'Azure Core'}</div>
+                    <div className="min-w-0">
+                      <div className="text-[9px] text-slate-500 uppercase font-mono tracking-wider">КОРПУС</div>
+                      <div className="text-sm font-bold text-slate-100 truncate">{skins.find(s => s.id === selectedSkin)?.name || 'Azure Core'}</div>
                     </div>
                   </div>
 
                   {/* Rocket skin showcase */}
-                  <div className="bg-zinc-900/40 border border-zinc-800/80 rounded-xl p-3 flex items-center gap-3 hover:border-indigo-500/20 transition">
+                  <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-3 flex items-center gap-3">
                     <RocketIcon
                       skinId={selectedRocketSkin}
                       size={44}
-                      className="rounded-xl border border-zinc-700/80 shadow-md flex-shrink-0"
+                      className="rounded-xl border border-slate-700/80 shadow flex-shrink-0"
                     />
-                    <div>
-                      <div className="text-[9px] text-zinc-500 uppercase font-mono tracking-wider">БОЕГОЛОВКА</div>
-                      <div className="text-sm font-bold text-zinc-200">{rocketSkins.find(r => r.id === selectedRocketSkin)?.name || 'Azure Sting'}</div>
+                    <div className="min-w-0">
+                      <div className="text-[9px] text-slate-500 uppercase font-mono tracking-wider">БОЕГОЛОВКА</div>
+                      <div className="text-sm font-bold text-slate-100 truncate">{rocketSkins.find(r => r.id === selectedRocketSkin)?.name || 'Azure Sting'}</div>
                     </div>
                   </div>
                 </div>
 
                 <button
                   onClick={() => setActiveScreen('hangar')}
-                  className="w-full mt-4 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-indigo-400 hover:text-indigo-300 border border-zinc-700 hover:border-zinc-600 rounded-xl text-xs uppercase font-extrabold tracking-widest transition cursor-pointer font-mono"
+                  className="w-full mt-4 vh-secondary-btn hover:text-indigo-300 hover:border-indigo-500/30"
                 >
-                  🔧 МОДИФИЦИРОВАТЬ АНГАР
+                  🔧 Настроить ангар
                 </button>
               </div>
 
-              {/* Middle: Mission Control Launch Console */}
-              <div className="col-span-12 md:col-span-5 bg-zinc-900 border border-zinc-800 rounded-2xl p-5 flex flex-col justify-between relative overflow-hidden bento-glow-indigo">
-                <div className="absolute inset-0 bg-gradient-to-b from-indigo-500/5 to-transparent pointer-events-none"></div>
-                
-                <div className="relative text-center my-auto py-2 flex flex-col items-center">
-                  {/* Active Sector Badge */}
-                  <div
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold font-mono tracking-wider mb-2 border"
-                    style={{
-                      backgroundColor: `${selectedSector.palette.accentColor}18`,
-                      borderColor: `${selectedSector.palette.accentColor}50`,
-                      color: selectedSector.palette.accentColor,
-                    }}
-                  >
-                    <span>🌌</span> {selectedSector.subtitle}: {selectedSector.name}
+              {/* Card 2: Mission Sector Console */}
+              <div className="vh-panel p-4 sm:p-5 flex flex-col justify-between text-center relative overflow-hidden">
+                <div className="flex flex-col items-center">
+                  <div className="w-full flex justify-between items-center mb-2">
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">СЕКТОР МИССИИ</h2>
+                    <span
+                      className="text-[10px] font-bold font-mono px-2 py-0.5 rounded border"
+                      style={{
+                        backgroundColor: `${selectedSector.palette.accentColor}18`,
+                        borderColor: `${selectedSector.palette.accentColor}40`,
+                        color: selectedSector.palette.accentColor,
+                      }}
+                    >
+                      {selectedSector.subtitle}
+                    </span>
                   </div>
 
-                  {/* Sector Flagship Portrait Preview */}
                   <BossIcon
                     sectorId={selectedSector.id}
                     size={64}
-                    className="rounded-2xl border border-cyan-500/40 shadow-[0_0_20px_rgba(6,182,212,0.25)] my-1.5"
+                    className="rounded-2xl border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.2)] my-2"
                     title={selectedSector.bossName}
                   />
 
-                  <h3 className="text-xl font-black text-white tracking-wide uppercase mt-1">
+                  <h3 className="text-lg sm:text-xl font-black text-white uppercase tracking-wide">
                     {selectedSector.name}
                   </h3>
-                  
-                  <p className="text-xs text-zinc-400 mt-1 max-w-[290px] mx-auto leading-relaxed">
-                    Цель: набрать <span className="text-sky-300 font-semibold">{selectedSector.targetScore.toLocaleString()} очков</span> и сокрушить флагман <span className="text-rose-400 font-semibold">{selectedSector.bossName}</span>.
-                  </p>
 
-                  <div className="mt-3 flex justify-center gap-2">
-                    <button
-                      onClick={() => setActiveScreen('sector_select')}
-                      className="py-1.5 px-4 bg-slate-800 hover:bg-slate-750 text-cyan-300 hover:text-cyan-200 border border-cyan-500/30 rounded-xl text-xs font-bold uppercase tracking-wider transition cursor-pointer font-mono flex items-center gap-1.5 shadow-sm"
-                    >
-                      🗺️ СЕКТОРЫ ГАЛАКТИКИ
-                    </button>
-                  </div>
+                  <p className="text-xs text-slate-400 mt-1 max-w-[270px] leading-relaxed">
+                    Цель: набрать <span className="text-sky-300 font-semibold">{selectedSector.targetScore.toLocaleString()} очков</span> и сокрушить <span className="text-rose-400 font-semibold">{selectedSector.bossName}</span>.
+                  </p>
                 </div>
 
                 <button
-                  onClick={() => {
-                    setIsEndless(false);
-                    handleStartRun();
-                  }}
-                  className="w-full mt-3 py-3 bg-gradient-to-r from-cyan-500 via-indigo-600 to-indigo-500 hover:from-cyan-400 hover:to-indigo-400 text-white text-sm font-black uppercase tracking-widest rounded-xl transition duration-250 cursor-pointer shadow-[0_0_20px_rgba(6,182,212,0.35)] border border-cyan-400/30"
+                  onClick={() => setActiveScreen('sector_select')}
+                  className="w-full mt-4 vh-secondary-btn text-cyan-300 hover:text-cyan-200 hover:border-cyan-500/40"
                 >
-                  🚀 НАЧАТЬ ВЫЛЕТ!
+                  🗺️ Сменить сектор
                 </button>
               </div>
 
-              {/* Right: Metrics / stats dashboard */}
-              <div className="col-span-12 md:col-span-3 flex flex-col gap-4">
-                
-                {/* Stats panel */}
-                <div className="bg-zinc-950 border border-zinc-800 rounded-2xl p-5 flex-1 flex flex-col justify-between">
-                  <div>
-                    <h2 className="text-[10px] font-black uppercase tracking-wider text-emerald-400 font-mono mb-3">БОРТОВОЙ ЖУРНАЛ</h2>
-                    
-                    <div className="space-y-4">
-                      <div>
-                        <div className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">ЛУЧШИЙ РЕКОРД</div>
-                        <div className="text-2xl font-black font-mono text-zinc-100 mt-0.5">{bestScore.toLocaleString()}</div>
-                      </div>
-                      <div>
-                        <div className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">МАКСИМАЛЬНАЯ ВОЛНА</div>
-                        <div className="text-2xl font-black font-mono text-indigo-400 mt-0.5">{bestWave} <span className="text-xs font-normal text-zinc-650">волн</span></div>
-                      </div>
-                      <div>
-                        <div className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">СБЕРЕЖЕНИЯ</div>
-                        <div className="text-lg font-black font-mono text-amber-400 mt-0.5">{bankCredits} кр.</div>
-                      </div>
+              {/* Card 3: Logbook & Codex */}
+              <div className="vh-panel p-4 sm:p-5 flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-center mb-3">
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">БОРТОВОЙ ЖУРНАЛ</h2>
+                    <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-mono font-bold">ПРОГРЕСС</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 mb-2.5">
+                    <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5">
+                      <div className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">РЕКОРД</div>
+                      <div className="text-xl font-black font-mono text-cyan-400 mt-0.5">{bestScore.toLocaleString()}</div>
+                    </div>
+                    <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5">
+                      <div className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">МАКС. ВОЛНА</div>
+                      <div className="text-xl font-black font-mono text-indigo-400 mt-0.5">{bestWave}</div>
                     </div>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-zinc-900 flex justify-between gap-1">
-                    <button
-                      onClick={() => setActiveScreen('leaderboard')}
-                      className="flex-1 py-1 px-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-[10px] font-bold uppercase tracking-wider rounded transition cursor-pointer font-mono"
-                    >
-                      🏆 ЛИДЕРЫ
-                    </button>
-                    <button
-                      onClick={() => setActiveScreen('codex')}
-                      className="flex-1 py-1 px-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-amber-300 text-[10px] font-bold uppercase tracking-wider rounded transition cursor-pointer font-mono"
-                    >
-                      ⭐ СИНЕРГИИ
-                    </button>
+                  <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 mb-2.5 flex justify-between items-center">
+                    <span className="text-[10px] uppercase tracking-wider text-slate-400 font-mono">СБЕРЕЖЕНИЯ</span>
+                    <span className="text-base font-black font-mono text-amber-400">{bankCredits.toLocaleString()} кр.</span>
+                  </div>
+
+                  {/* Integrated Synergy Progress Bar */}
+                  <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5">
+                    <div className="flex justify-between items-center text-[10px] font-mono mb-1">
+                      <span className="text-slate-400">СИНЕРГИИ</span>
+                      <span className="text-indigo-300 font-bold">{unlockedSynergies.length} / {TOTAL_SYNERGIES_COUNT}</span>
+                    </div>
+                    <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className="bg-gradient-to-r from-indigo-500 to-cyan-400 h-full rounded-full transition-all duration-500"
+                        style={{ width: `${Math.min(100, Math.max(5, (unlockedSynergies.length / TOTAL_SYNERGIES_COUNT) * 100))}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
 
-                {/* Auxiliary quick status */}
-                <div className="bg-indigo-950/20 border border-indigo-500/20 rounded-2xl p-4 flex flex-col justify-between">
-                  <div>
-                    <div className="text-[9px] font-bold text-indigo-300 uppercase tracking-widest font-mono">АКТИВИРОВАНО СИНЕРГИЙ</div>
-                    <div className="text-2xl font-bold font-mono text-white mt-1">{unlockedSynergies.length} / {TOTAL_SYNERGIES_COUNT}</div>
-                  </div>
-                  <div className="w-full bg-zinc-900 h-1.5 rounded-full mt-2 relative overflow-hidden">
-                    <div 
-                      className="bg-indigo-500 h-full rounded-full shadow-[0_0_8px_#6366f1] transition-all duration-500"
-                      style={{ width: `${Math.min(100, Math.max(10, (unlockedSynergies.length / TOTAL_SYNERGIES_COUNT) * 100))}%` }}
-                    />
-                  </div>
+                <div className="mt-4 flex gap-2">
+                  <button
+                    onClick={() => setActiveScreen('leaderboard')}
+                    className="flex-1 vh-secondary-btn"
+                  >
+                    🏆 Рекорды
+                  </button>
+                  <button
+                    onClick={() => setActiveScreen('codex')}
+                    className="flex-1 vh-secondary-btn text-amber-300 hover:text-amber-200"
+                  >
+                    ⭐ Кодекс
+                  </button>
                 </div>
               </div>
 
             </div>
 
+            {/* SINGLE PROMINENT CALL-TO-ACTION: LAUNCH RUN */}
+            <div className="mt-2">
+              <button
+                onClick={() => {
+                  setIsEndless(false);
+                  handleStartRun();
+                }}
+                className="w-full py-4 vh-primary-action text-white text-base sm:text-lg font-black uppercase tracking-widest cursor-pointer border border-cyan-400/30 flex items-center justify-center gap-3"
+              >
+                <span className="text-xl sm:text-2xl animate-pulse">🚀</span>
+                <span>НАЧАТЬ ЗАБЕГ</span>
+                <span className="text-xs sm:text-sm font-normal text-cyan-200/90 font-mono tracking-normal hidden sm:inline">
+                  • {selectedSector.name}
+                </span>
+              </button>
+            </div>
+
             {/* Bottom Status Bar */}
-            <footer className="flex flex-col sm:flex-row justify-between items-center gap-2 mt-6 text-[9px] text-zinc-400 font-mono border-t border-zinc-800/60 pt-3">
+            <footer className="flex flex-col sm:flex-row justify-between items-center gap-2 mt-4 text-[9px] text-zinc-400 font-mono border-t border-zinc-800/60 pt-3">
               <div className="flex flex-wrap gap-3 items-center">
                 <span>🎮 Управление: WASD / Стрелки / Виртуальный джойстик</span>
                 <span>⏸ Пауза: Esc / P</span>
@@ -799,8 +807,8 @@ export default function App() {
 
       {/* Upgrade cards selection Overlay */}
       {activeScreen === 'upgrade' && (
-        <div className="fixed inset-0 z-40 bg-zinc-950/80 backdrop-blur-md flex items-start sm:items-center justify-center p-2 sm:p-4 select-none overflow-y-auto">
-          <div className="w-full max-w-xl bg-zinc-900 border border-zinc-800 rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-2xl flex flex-col bento-glow-indigo my-auto">
+        <div className="fixed inset-0 z-40 vh-safe-area bg-zinc-950/85 backdrop-blur-md flex items-start sm:items-center justify-center select-none overflow-y-auto vh-fade-in">
+          <div className="w-full max-w-2xl vh-panel p-4 sm:p-6 shadow-2xl flex flex-col my-auto">
             <div className="text-center mb-3 sm:mb-6">
               <span className="text-[9px] sm:text-[10px] font-black tracking-widest text-indigo-400 uppercase bg-indigo-500/10 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full border border-indigo-500/20 font-mono">
                 НОВЫЙ УРОВЕНЬ ОРУЖИЯ
@@ -810,24 +818,36 @@ export default function App() {
             </div>
 
             {/* List upgrade perks cards */}
-            <div className="flex flex-col gap-2 sm:gap-3 max-h-[48dvh] sm:max-h-[50vh] overflow-y-auto pr-1">
+            <div className="flex flex-col gap-2.5 sm:gap-3 max-h-[50dvh] sm:max-h-[52vh] overflow-y-auto pr-1">
               {currentUpgrades.map(u => {
                 const rarColor =
                   u.rar === 'Legendary'
-                    ? 'text-yellow-400'
+                    ? 'text-amber-400'
                     : u.rar === 'Epic'
                     ? 'text-purple-400'
                     : u.rar === 'Rare'
-                    ? 'text-indigo-400'
-                    : 'text-zinc-400';
+                    ? 'text-sky-400'
+                    : 'text-slate-400';
+
+                const borderLeftColor =
+                  u.synergy || u.id.startsWith('syn_')
+                    ? 'border-l-amber-400 bg-amber-500/[0.04]'
+                    : u.rar === 'Legendary'
+                    ? 'border-l-amber-400'
+                    : u.rar === 'Epic'
+                    ? 'border-l-purple-400'
+                    : u.rar === 'Rare'
+                    ? 'border-l-sky-400'
+                    : 'border-l-slate-600';
 
                 return (
                   <div
                     key={u.id}
                     onClick={() => handleSelectUpgrade(u)}
-                    className={`p-2.5 sm:p-3.5 bg-zinc-950/60 border border-zinc-800/80 hover:border-indigo-500/50 rounded-xl transition duration-150 cursor-pointer text-left flex items-center group relative overflow-hidden ${
-                      u.synergy ? 'border-yellow-500/50 bg-gradient-to-r from-yellow-500/10 via-zinc-950/70 to-indigo-500/10 shadow-[0_0_15px_rgba(251,191,36,0.06)]' : ''
-                    }`}
+                    className={`vh-panel vh-panel-interactive p-3 sm:p-4 cursor-pointer text-left flex items-center group relative overflow-hidden border-l-4 hover:bg-slate-900/90 ${borderLeftColor}`}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelectUpgrade(u); } }}
                   >
                     <PerkIcon
                       id={u.id}
@@ -840,30 +860,30 @@ export default function App() {
                           {u.rar}
                         </span>
                         {u.synergy && (
-                          <span className="text-[8px] sm:text-[10px] font-black tracking-widest uppercase text-yellow-300 bg-yellow-500/20 px-1.5 py-0.5 rounded font-mono border border-yellow-500/30">
-                            ★ СИНЕРГИЯ
+                          <span className="text-[8px] sm:text-[10px] font-black tracking-widest uppercase text-amber-300 bg-amber-500/15 px-1.5 py-0.5 rounded font-mono border border-amber-500/30">
+                            ★ {u.id.startsWith('syn_') ? 'ЭВОЛЮЦИЯ' : 'СИНЕРГИЯ'}
                           </span>
                         )}
-                        {u.currentLevel !== undefined && u.nextLevel !== undefined && (
+                        {u.currentLevel !== undefined && u.nextLevel !== undefined ? (
                           u.currentLevel === 0 ? (
                             <span className="text-[8px] sm:text-[9px] font-mono font-bold text-emerald-400 bg-emerald-500/15 px-1.5 py-0.5 rounded border border-emerald-500/25">
-                              НОВОЕ
+                              ✨ НОВОЕ
                             </span>
                           ) : (
                             <span className="text-[8px] sm:text-[9px] font-mono font-bold text-cyan-300 bg-cyan-500/15 px-1.5 py-0.5 rounded border border-cyan-500/25">
                               УР. {u.currentLevel} → {u.nextLevel}
                             </span>
                           )
-                        )}
+                        ) : null}
                       </div>
-                      <h3 className="text-xs sm:text-sm font-black text-zinc-100 mt-0.5 sm:mt-1 group-hover:text-indigo-400 transition truncate">
+                      <h3 className="text-xs sm:text-sm font-black text-zinc-100 mt-0.5 sm:mt-1 group-hover:text-cyan-300 transition truncate">
                         {u.name}
                       </h3>
-                      <p className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 leading-snug break-words">{u.desc}</p>
+                      <p className="text-[11px] sm:text-xs text-slate-400 mt-1 leading-snug line-clamp-2">{u.desc}</p>
                       
                       {/* Stat Delta if available */}
                       {u.statDelta && (
-                        <div className="text-[9px] sm:text-[10px] text-emerald-400/90 font-mono mt-1 font-semibold flex items-center gap-1">
+                        <div className="text-[9px] sm:text-[10px] text-emerald-400 font-mono mt-1 font-semibold flex items-center gap-1">
                           <span>▲</span>
                           <span>{u.statDelta}</span>
                         </div>
@@ -887,8 +907,8 @@ export default function App() {
                         </div>
                       )}
                     </div>
-                    <button className="ml-2.5 sm:ml-4 px-2.5 py-1 sm:px-3.5 sm:py-1.5 bg-zinc-800 group-hover:bg-indigo-600 text-indigo-400 group-hover:text-white text-[10px] sm:text-xs font-bold rounded-lg border border-zinc-700 group-hover:border-indigo-500 transition pointer-events-none font-mono flex-shrink-0">
-                      ВЗЯТЬ
+                    <button className="ml-2.5 sm:ml-4 px-3 py-1.5 bg-slate-800 group-hover:bg-cyan-500 text-cyan-300 group-hover:text-slate-950 text-[10px] sm:text-xs font-bold rounded-lg border border-slate-700 group-hover:border-cyan-400 transition pointer-events-none font-mono flex-shrink-0">
+                      ВЫБРАТЬ
                     </button>
                   </div>
                 );
@@ -916,7 +936,7 @@ export default function App() {
 
       {/* Paused options Selection - Tactical Pause with Build Overview & Settings */}
       {activeScreen === 'pause' && (
-        <div className="fixed inset-0 z-40 bg-zinc-950/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 select-none overflow-y-auto">
+        <div className="fixed inset-0 z-40 vh-safe-area bg-zinc-950/85 backdrop-blur-md flex items-center justify-center select-none overflow-y-auto">
           <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-4 sm:p-6 w-full max-w-lg text-center shadow-2xl bento-glow-indigo my-auto max-h-[92vh] flex flex-col">
             
             {/* Header */}

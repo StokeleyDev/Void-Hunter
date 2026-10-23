@@ -3986,7 +3986,7 @@ export default function GameCanvas({
             </div>
           )}
 
-          <div className="absolute top-0 left-0 right-0 p-2 sm:p-4 pointer-events-none flex justify-between items-start select-none font-sans antialiased text-white">
+          <div className="absolute top-0 left-0 right-0 vh-hud-inset pointer-events-none flex justify-between items-start select-none font-sans antialiased text-white">
             {/* Left Column: Stats & Hull */}
             <div className="flex flex-col gap-1.5 sm:gap-2 pointer-events-auto">
               <div className="flex gap-1 sm:gap-2">
@@ -4019,10 +4019,10 @@ export default function GameCanvas({
             </div>
 
             {/* Center: Sector Progress & Boss Bar */}
-            <div className="flex-1 max-w-[140px] xs:max-w-[200px] sm:max-w-md mx-2 flex flex-col items-center pointer-events-auto">
+            <div className="flex-1 max-w-[200px] xs:max-w-[260px] sm:max-w-md mx-1 sm:mx-3 flex flex-col items-center pointer-events-auto">
               {hudInfo.bossActive ? (
                 /* Flagship Health Bar */
-                <div className="w-full bg-slate-950/90 border border-rose-500/60 rounded-xl p-1.5 sm:p-2 shadow-[0_0_20px_rgba(244,63,94,0.35)] backdrop-blur-md flex items-center gap-2">
+                <div className="w-full bg-slate-950/95 border border-rose-500/50 rounded-xl p-1.5 sm:p-2 shadow-[0_0_25px_rgba(244,63,94,0.35)] backdrop-blur-md flex items-center gap-2">
                   <BossIcon
                     sectorId={selectedSector?.id || 'earth'}
                     size={36}
@@ -4031,11 +4031,11 @@ export default function GameCanvas({
                   <div className="flex-1 min-w-0">
                     <div className="flex justify-between items-center text-[8px] sm:text-xs font-black tracking-wider text-rose-300">
                       <span className="truncate flex items-center gap-1">⚠️ {hudInfo.bossName}</span>
-                      <span className="font-mono text-rose-400 ml-1">{Math.round(hudInfo.bossHpPercent)}%</span>
+                      <span className="font-mono text-rose-400 font-bold ml-1">{Math.round(hudInfo.bossHpPercent)}%</span>
                     </div>
                     <div className="w-full h-1.5 sm:h-2.5 bg-slate-900 rounded-full overflow-hidden mt-1 border border-rose-950">
                       <div
-                        className="h-full bg-gradient-to-r from-orange-500 via-rose-500 to-red-600 transition-all duration-100 shadow-[0_0_10px_#f43f5e]"
+                        className="h-full bg-gradient-to-r from-amber-500 via-rose-500 to-red-600 transition-all duration-100 shadow-[0_0_10px_#f43f5e]"
                         style={{ width: `${hudInfo.bossHpPercent}%` }}
                       />
                     </div>
@@ -4078,7 +4078,7 @@ export default function GameCanvas({
                 
                 <button
                   onClick={() => onStateChange('pause')}
-                  className="pointer-events-auto px-2 py-1 bg-slate-900/90 hover:bg-slate-800 border border-slate-700 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-300 hover:text-white transition cursor-pointer select-none"
+                  className="pointer-events-auto min-h-11 px-3 py-2 bg-slate-900/90 hover:bg-slate-800 border border-slate-700 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-300 hover:text-white transition cursor-pointer select-none"
                 >
                   ⏸ Пауза
                 </button>
@@ -4115,7 +4115,7 @@ export default function GameCanvas({
 
           {/* Active Equipment Dock at Bottom */}
           {hudInfo.tags.length > 0 && (
-            <div className="absolute bottom-2 sm:bottom-3 left-2 sm:left-4 z-20 flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 bg-slate-950/75 border border-slate-800/80 rounded-xl backdrop-blur-md max-w-[85vw] overflow-x-auto select-none pointer-events-none shadow-lg">
+            <div className="absolute bottom-0 sm:bottom-1 left-2 sm:left-4 z-20 flex items-center gap-1 sm:gap-1.5 p-1 sm:p-1.5 bg-slate-950/75 border border-slate-800/80 rounded-xl backdrop-blur-md max-w-[85vw] overflow-x-auto select-none pointer-events-none shadow-lg [margin-bottom:env(safe-area-inset-bottom)]">
               {hudInfo.tags.map((tg, idx) => (
                 <div key={idx} className="relative flex-shrink-0">
                   <PerkIcon
