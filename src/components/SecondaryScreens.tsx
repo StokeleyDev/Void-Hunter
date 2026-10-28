@@ -5,8 +5,9 @@
 
 import React, { useState } from 'react';
 import { RunHistoryItem, Skin } from '../types';
-import { UPGRADES } from '../utils/upgrades';
+import { UPGRADES, getLocalizedUpgrade } from '../utils/upgrades';
 import { PerkIcon } from '../utils/icons';
+import { useI18n } from '../i18n';
 
 interface SecondaryScreensProps {
   initialTab: 'leaderboard' | 'history' | 'codex';
@@ -27,17 +28,11 @@ export default function SecondaryScreens({
   skins,
   onClose,
 }: SecondaryScreensProps) {
+  const { t, language } = useI18n();
   const [tab, setTab] = useState<'leaderboard' | 'history' | 'codex'>(initialTab);
 
   // Synergy list filter (all upgrades where synergy is true)
   const listSynergies = UPGRADES.filter(u => u.synergy);
-
-  const getRankMedal = (rank: number) => {
-    if (rank === 1) return '🥇';
-    if (rank === 2) return '🥈';
-    if (rank === 3) return '🥉';
-    return `#${rank}`;
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center vh-safe-area bg-zinc-950/85 backdrop-blur-md">
@@ -53,7 +48,7 @@ export default function SecondaryScreens({
                 : 'bg-transparent text-slate-400 hover:text-slate-200'
             }`}
           >
-            🏆 Рекорды
+            {t('leaderboardTab')}
           </button>
           <button
             onClick={() => setTab('history')}
@@ -63,7 +58,7 @@ export default function SecondaryScreens({
                 : 'bg-transparent text-zinc-500 hover:text-zinc-300'
             }`}
           >
-            📜 История
+            {t('historyTab')}
           </button>
           <button
             onClick={() => setTab('codex')}
@@ -73,7 +68,7 @@ export default function SecondaryScreens({
                 : 'bg-transparent text-zinc-500 hover:text-zinc-305'
             }`}
           >
-            ⭐ Синергии
+            {t('codexTab')}
           </button>
         </div>
 
@@ -81,7 +76,7 @@ export default function SecondaryScreens({
         <div className="flex-1 overflow-y-auto pr-1">
           {tab === 'leaderboard' && (
             <div className="flex flex-col gap-3">
-              <h3 className="text-xs uppercase font-black text-zinc-500 tracking-wider font-mono">ТАБЛИЦА РЕКОРДОВ</h3>
+              <h3 className="text-xs uppercase font-black text-zinc-500 tracking-wider font-mono">{t('leaderboardTitle')}</h3>
               
               {bestWave > 0 ? (
                 <div className="p-4 bg-zinc-950/60 rounded-xl border border-indigo-500/25 flex justify-between items-center relative overflow-hidden bento-glow-indigo">
@@ -90,38 +85,39 @@ export default function SecondaryScreens({
                   </div>
                   <div>
                     <div className="font-extrabold text-indigo-400 text-lg flex items-center gap-2 font-sans">
-                      🥇 #1 Игрок <span className="text-[10px] bg-indigo-500/20 px-2 py-0.5 rounded text-indigo-300 tracking-widest uppercase font-mono">ТЫ</span>
+                      {t('firstPlayer')} <span className="text-[10px] bg-indigo-500/20 px-2 py-0.5 rounded text-indigo-300 tracking-widest uppercase font-mono">{t('youBadge')}</span>
                     </div>
                     <div className="text-xs text-zinc-400 mt-1 font-mono">
-                      ЛИЧНЫЙ РЕКОРД: <span className="text-zinc-100 font-bold">{bestScore.toLocaleString()}</span>
+                      {t('personalRecord')} <span className="text-zinc-100 font-bold">{bestScore.toLocaleString()}</span>
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-[9px] font-semibold text-zinc-500 uppercase font-mono">Макс. Волна</div>
+                    <div className="text-[9px] font-semibold text-zinc-500 uppercase font-mono">{t('maxWave')}</div>
                     <div className="text-3xl font-black text-indigo-400 leading-none font-mono">{bestWave}</div>
                   </div>
                 </div>
               ) : (
                 <div className="text-center py-10 border border-dashed border-zinc-800 rounded-xl">
-                  <p className="text-zinc-400 text-sm">Ты еще не совершил ни одного вылета.</p>
-                  <p className="text-xs text-indigo-400 mt-1 font-mono">Очки твоих забегов загрузятся сюда!</p>
+                  <p className="text-zinc-400 text-sm">{t('noRunsYet')}</p>
+                  <p className="text-xs text-indigo-400 mt-1 font-mono">{t('runsWillLoadHere')}</p>
                 </div>
               )}
               
               <div className="mt-2 text-[10px] text-zinc-500 bg-zinc-950/30 p-3 rounded-lg border border-zinc-850 text-center font-mono uppercase">
-                🏆 Личные рекорды и статистика вылетов сохраняются локально на этом устройстве.
+                {t('localSaveNotice')}
               </div>
             </div>
           )}
 
           {tab === 'history' && (
             <div className="flex flex-col gap-2.5">
-              <h3 className="text-xs uppercase font-black text-zinc-500 tracking-wider mb-1 font-mono">ИСТОРИЯ ВЫЛЕТОВ</h3>
+              <h3 className="text-xs uppercase font-black text-zinc-500 tracking-wider mb-1 font-mono">{t('historyTitle')}</h3>
               {runHistory.length > 0 ? (
                 runHistory.map((run, i) => {
                   const skin = skins.find(s => s.id === run.skin);
                   const dateObj = new Date(run.date);
-                  const formattedDate = dateObj.toLocaleDateString('ru-RU', {
+                  const dateLocale = language === 'ru' ? 'ru-RU' : 'en-US';
+                  const formattedDate = dateObj.toLocaleDateString(dateLocale, {
                     day: '2-digit',
                     month: '2-digit',
                     hour: '2-digit',
@@ -143,13 +139,13 @@ export default function SecondaryScreens({
                         <div>
                           <div className="text-sm font-black text-zinc-200 flex items-center gap-2">
                             {run.victory ? (
-                              <span className="text-emerald-400 font-bold">🏆 ПОБЕДА: {run.sectorName || 'Сектор'}</span>
+                              <span className="text-emerald-400 font-bold">{t('victoryLabel')} {run.sectorName || 'Sector'}</span>
                             ) : (
-                              <span>Забег #{runHistory.length - i}</span>
+                              <span>{t('runNumber')}{runHistory.length - i}</span>
                             )}
                           </div>
                           <div className="text-[11px] text-zinc-400 mt-0.5 font-mono">
-                            Волна {run.wave} • {run.score.toLocaleString()} очков • {formattedDate}
+                            {t('wave')} {run.wave} • {run.score.toLocaleString()} {t('pointsWon')} • {formattedDate}
                           </div>
                           {run.upgrades && run.upgrades.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1.5">
@@ -164,16 +160,16 @@ export default function SecondaryScreens({
                         </div>
                       </div>
                       <div className="text-right font-mono flex-shrink-0 ml-3">
-                        <div className="text-xs font-black text-amber-400">+{run.credits} КР.</div>
-                        <div className="text-[10px] text-zinc-500 uppercase mt-0.5 font-bold">ЗАРАБОТАНО</div>
+                        <div className="text-xs font-black text-amber-400">+{run.credits} {t('creditsSuffix').toUpperCase()}</div>
+                        <div className="text-[10px] text-zinc-500 uppercase mt-0.5 font-bold">{t('earnedCreditsLabel')}</div>
                       </div>
                     </div>
                   );
                 })
               ) : (
                 <div className="text-center py-10 border border-dashed border-zinc-800 rounded-xl">
-                  <p className="text-zinc-400 text-sm">Раздел истории пуст.</p>
-                  <p className="text-xs text-zinc-500 mt-1 font-mono">Пройди хотя бы 1 волну до гибели обшивки.</p>
+                  <p className="text-zinc-400 text-sm">{t('emptyHistory')}</p>
+                  <p className="text-xs text-zinc-500 mt-1 font-mono">{t('emptyHistoryTip')}</p>
                 </div>
               )}
             </div>
@@ -182,15 +178,16 @@ export default function SecondaryScreens({
           {tab === 'codex' && (
             <div className="flex flex-col gap-3">
               <div className="mb-1">
-                <h3 className="text-xs uppercase font-black text-zinc-500 tracking-wider font-mono">СИНЕРГОПЕДИЯ СЕКТОРА</h3>
+                <h3 className="text-xs uppercase font-black text-zinc-500 tracking-wider font-mono">{t('codexTitle')}</h3>
                 <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-                  Объединяй обычные апгрейды во время прокачки для открытия легендарных оружейных комплексов.
+                  {t('codexDesc')}
                 </p>
               </div>
 
               <div className="flex flex-col gap-2">
                 {listSynergies.map(s => {
                   const unlocked = unlockedSynergies.includes(s.id);
+                  const locSyn = getLocalizedUpgrade(s, language);
                   return (
                     <div
                       key={s.id}
@@ -210,15 +207,15 @@ export default function SecondaryScreens({
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start gap-2">
                           <h4 className={`text-sm font-black truncate ${unlocked ? 'text-yellow-400' : 'text-zinc-300'}`}>
-                            {unlocked ? '🌟 ' : '🔒 '}{s.name}
+                            {unlocked ? '🌟 ' : '🔒 '}{locSyn.name}
                           </h4>
                           <span className={`text-[10px] font-black tracking-widest px-1.5 py-0.5 rounded font-mono flex-shrink-0 ${
                             unlocked ? 'bg-yellow-500/25 text-yellow-300' : 'bg-zinc-805 text-zinc-500'
                           }`}>
-                            {unlocked ? 'ОТКРЫТО' : 'ЗАБЛОК'}
+                            {unlocked ? t('unlockedCodexBadge') : t('lockedCodexBadge')}
                           </span>
                         </div>
-                        <p className="text-xs text-zinc-400 leading-tight mt-1">{s.desc}</p>
+                        <p className="text-xs text-zinc-400 leading-tight mt-1">{locSyn.desc}</p>
                       </div>
                     </div>
                   );
@@ -233,7 +230,7 @@ export default function SecondaryScreens({
           onClick={onClose}
           className="w-full mt-6 py-2.5 bg-zinc-800 hover:bg-zinc-755 hover:text-white text-zinc-300 text-sm tracking-widest font-black uppercase rounded-xl transition duration-150 border border-zinc-700 hover:border-zinc-550 cursor-pointer font-mono"
         >
-          Вернуться в меню
+          {t('toMenu')}
         </button>
       </div>
     </div>

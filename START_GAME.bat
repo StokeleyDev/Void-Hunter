@@ -1,14 +1,14 @@
 @echo off
 chcp 65001 >nul
-title VOID HUNTER - ЗАПУСК ИГРЫ
+title VOID HUNTER - GAME LAUNCHER
 color 0B
 
 echo ===================================================
-echo           ЗАПУСК VOID HUNTER (1-КЛИК)
+echo             VOID HUNTER LAUNCHER (1-CLICK)
 echo ===================================================
 echo.
 
-:: Переходим в папку с игрой
+:: Navigate to game directory
 cd /d "%~dp0void" 2>nul
 if not exist "package.json" (
   cd /d "%~dp0"
@@ -16,19 +16,19 @@ if not exist "package.json" (
 
 if not exist "package.json" (
   color 0C
-  echo [ОШИБКА] Не найдена папка с игрой (package.json)!
+  echo [ERROR] Game directory (package.json) not found!
   pause
   exit /b
 )
 
-echo [1/2] Открытие игры в браузере...
+echo [1/2] Opening game in browser...
 start http://localhost:3000
 
-echo [2/2] Запуск сервера Vite на порту 3000...
+echo [2/2] Starting Vite development server on port 3000...
 echo.
 echo ===================================================
-echo  Игра запущена: http://localhost:3000
-echo  Для выхода просто закройте это черное окно.
+echo  Game running at: http://localhost:3000
+echo  To exit, simply close this window.
 echo ===================================================
 echo.
 

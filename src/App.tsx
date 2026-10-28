@@ -4,18 +4,21 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { GameState, Player, Upgrade, RunHistoryItem, Skin, RocketSkin, SectorConfig, SECTORS, GameSettings } from './types';
+import { GameState, Player, Upgrade, RunHistoryItem, Skin, RocketSkin, SectorConfig, SECTORS, GameSettings, getLocalizedSector, getLocalizedSkin, getLocalizedRocketSkin } from './types';
 import GameCanvas from './components/GameCanvas';
 import HangarScreen from './components/HangarScreen';
 import SecondaryScreens from './components/SecondaryScreens';
 import SectorSelectScreen from './components/SectorSelectScreen';
 import SectorVictoryModal from './components/SectorVictoryModal';
-import { pickUpgrades, spd, TOTAL_SYNERGIES_COUNT, getPlayerBuild } from './utils/upgrades';
+import { pickUpgrades, spd, TOTAL_SYNERGIES_COUNT, getPlayerBuild, getLocalizedUpgrade } from './utils/upgrades';
 import { Sound } from './utils/sound';
 import { Music } from './utils/music';
 import { PerkIcon, ShipIcon, RocketIcon, BossIcon } from './utils/icons';
+import { useI18n } from './i18n';
 
 export default function App() {
+  const { t, language, setLanguage, toggleLanguage } = useI18n();
+
   // Global Metagame states loaded from localStorage
   const [bankCredits, setBankCredits] = useState<number>(0);
   const [selectedSkin, setSelectedSkin] = useState<string>('classic');
@@ -599,33 +602,42 @@ export default function App() {
                   <span className="text-slate-400 font-mono text-xs px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 font-bold">v1.4.0</span>
                 </h1>
                 <p className="text-slate-400 text-[10px] uppercase tracking-widest mt-0.5 font-mono">
-                  АРКАДНЫЙ КОСМИЧЕСКИЙ ROGUELITE-ШУТЕР
+                  {t('subHeader')}
                 </p>
               </div>
               <div className="flex gap-1.5 sm:gap-2 items-center flex-shrink-0">
+                {/* Language Switch Button */}
+                <button
+                  onClick={toggleLanguage}
+                  className="bg-slate-800 hover:bg-slate-750 text-cyan-300 hover:text-white px-2.5 sm:px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-700 hover:border-cyan-500/40 transition uppercase tracking-wider cursor-pointer font-mono flex items-center gap-1.5"
+                  title={language === 'ru' ? 'Switch to English' : 'Переключить на русский'}
+                >
+                  <span className="text-xs">🌐</span>
+                  <span>{language === 'ru' ? 'EN' : 'RU'}</span>
+                </button>
                 <button
                   onClick={() => setShowSettingsModal(true)}
                   className="bg-slate-800 hover:bg-slate-750 text-slate-200 px-2.5 sm:px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-700 transition uppercase tracking-wider cursor-pointer font-mono flex items-center gap-1"
-                  title="Настройки"
+                  title={t('settings')}
                 >
                   <span>⚙️</span>
-                  <span className="hidden sm:inline">НАСТРОЙКИ</span>
+                  <span className="hidden sm:inline">{t('settings')}</span>
                 </button>
                 <button
                   onClick={handleMuteToggle}
                   className="bg-slate-800 hover:bg-slate-750 text-slate-200 px-2 sm:px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-700 transition uppercase tracking-wider cursor-pointer font-mono flex items-center gap-1"
-                  title="Переключить SFX"
+                  title={`SFX: ${isMuted ? t('off') : t('on')}`}
                 >
                   <span>{isMuted ? '🔇' : '🔊'}</span>
-                  <span className="hidden sm:inline">SFX</span>
+                  <span className="hidden sm:inline">{t('sfx')}</span>
                 </button>
                 <button
                   onClick={handleMusicToggle}
                   className="bg-slate-800 hover:bg-slate-750 text-slate-200 px-2 sm:px-3 py-1.5 rounded-lg text-[10px] font-bold border border-slate-700 transition uppercase tracking-wider cursor-pointer font-mono flex items-center gap-1"
-                  title="Переключить музыку"
+                  title={`${t('music')}: ${isMusicMuted ? t('off') : t('on')}`}
                 >
                   <span>{isMusicMuted ? '🔇' : '🎵'}</span>
-                  <span className="hidden sm:inline">МУЗЫКА</span>
+                  <span className="hidden sm:inline">{t('music')}</span>
                 </button>
               </div>
             </header>
@@ -637,8 +649,8 @@ export default function App() {
               <div className="vh-panel p-4 sm:p-5 flex flex-col justify-between">
                 <div>
                   <div className="flex justify-between items-center mb-3">
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">АНГАР И СНАРЯЖЕНИЕ</h2>
-                    <span className="text-[10px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded font-mono font-bold">ГОТОВ</span>
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">{language === 'ru' ? 'АНГАР И СНАРЯЖЕНИЕ' : 'HANGAR & LOADOUT'}</h2>
+                    <span className="text-[10px] bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded font-mono font-bold">{language === 'ru' ? 'ГОТОВ' : 'READY'}</span>
                   </div>
 
                   {/* Ship skin showcase */}
@@ -649,8 +661,10 @@ export default function App() {
                       className="rounded-xl border border-slate-700/80 shadow flex-shrink-0"
                     />
                     <div className="min-w-0">
-                      <div className="text-[9px] text-slate-500 uppercase font-mono tracking-wider">КОРПУС</div>
-                      <div className="text-sm font-bold text-slate-100 truncate">{skins.find(s => s.id === selectedSkin)?.name || 'Azure Core'}</div>
+                      <div className="text-[9px] text-slate-500 uppercase font-mono tracking-wider">{t('hull')}</div>
+                      <div className="text-sm font-bold text-slate-100 truncate">
+                        {getLocalizedSkin(skins.find(s => s.id === selectedSkin) || skins[0], language).name}
+                      </div>
                     </div>
                   </div>
 
@@ -662,8 +676,10 @@ export default function App() {
                       className="rounded-xl border border-slate-700/80 shadow flex-shrink-0"
                     />
                     <div className="min-w-0">
-                      <div className="text-[9px] text-slate-500 uppercase font-mono tracking-wider">БОЕГОЛОВКА</div>
-                      <div className="text-sm font-bold text-slate-100 truncate">{rocketSkins.find(r => r.id === selectedRocketSkin)?.name || 'Azure Sting'}</div>
+                      <div className="text-[9px] text-slate-500 uppercase font-mono tracking-wider">{language === 'ru' ? 'БОЕГОЛОВКА' : 'WARHEAD'}</div>
+                      <div className="text-sm font-bold text-slate-100 truncate">
+                        {getLocalizedRocketSkin(rocketSkins.find(r => r.id === selectedRocketSkin) || rocketSkins[0], language).name}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -672,7 +688,7 @@ export default function App() {
                   onClick={() => setActiveScreen('hangar')}
                   className="w-full mt-4 vh-secondary-btn hover:text-indigo-300 hover:border-indigo-500/30"
                 >
-                  🔧 Настроить ангар
+                  🔧 {language === 'ru' ? 'Настроить ангар' : 'Configure Hangar'}
                 </button>
               </div>
 
@@ -680,7 +696,7 @@ export default function App() {
               <div className="vh-panel p-4 sm:p-5 flex flex-col justify-between text-center relative overflow-hidden">
                 <div className="flex flex-col items-center">
                   <div className="w-full flex justify-between items-center mb-2">
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">СЕКТОР МИССИИ</h2>
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">{language === 'ru' ? 'СЕКТОР МИССИИ' : 'MISSION SECTOR'}</h2>
                     <span
                       className="text-[10px] font-bold font-mono px-2 py-0.5 rounded border"
                       style={{
@@ -689,7 +705,7 @@ export default function App() {
                         color: selectedSector.palette.accentColor,
                       }}
                     >
-                      {selectedSector.subtitle}
+                      {getLocalizedSector(selectedSector, language).subtitle}
                     </span>
                   </div>
 
@@ -697,15 +713,18 @@ export default function App() {
                     sectorId={selectedSector.id}
                     size={64}
                     className="rounded-2xl border border-cyan-500/30 shadow-[0_0_20px_rgba(6,182,212,0.2)] my-2"
-                    title={selectedSector.bossName}
+                    title={getLocalizedSector(selectedSector, language).bossName}
                   />
 
                   <h3 className="text-lg sm:text-xl font-black text-white uppercase tracking-wide">
-                    {selectedSector.name}
+                    {getLocalizedSector(selectedSector, language).name}
                   </h3>
 
                   <p className="text-xs text-slate-400 mt-1 max-w-[270px] leading-relaxed">
-                    Цель: набрать <span className="text-sky-300 font-semibold">{selectedSector.targetScore.toLocaleString()} очков</span> и сокрушить <span className="text-rose-400 font-semibold">{selectedSector.bossName}</span>.
+                    {t('sectorObjective')}: {t('sectorObjectiveDesc', {
+                      target: selectedSector.targetScore.toLocaleString(),
+                      boss: getLocalizedSector(selectedSector, language).bossName,
+                    })}
                   </p>
                 </div>
 
@@ -713,7 +732,7 @@ export default function App() {
                   onClick={() => setActiveScreen('sector_select')}
                   className="w-full mt-4 vh-secondary-btn text-cyan-300 hover:text-cyan-200 hover:border-cyan-500/40"
                 >
-                  🗺️ Сменить сектор
+                  🗺️ {language === 'ru' ? 'Сменить сектор' : 'Change Sector'}
                 </button>
               </div>
 
@@ -721,30 +740,30 @@ export default function App() {
               <div className="vh-panel p-4 sm:p-5 flex flex-col justify-between">
                 <div>
                   <div className="flex justify-between items-center mb-3">
-                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">БОРТОВОЙ ЖУРНАЛ</h2>
-                    <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-mono font-bold">ПРОГРЕСС</span>
+                    <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">{language === 'ru' ? 'БОРТОВОЙ ЖУРНАЛ' : 'FLIGHT LOG'}</h2>
+                    <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded font-mono font-bold">{language === 'ru' ? 'ПРОГРЕСС' : 'PROGRESS'}</span>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 mb-2.5">
                     <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5">
-                      <div className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">РЕКОРД</div>
+                      <div className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">{t('score').toUpperCase()}</div>
                       <div className="text-xl font-black font-mono text-cyan-400 mt-0.5">{bestScore.toLocaleString()}</div>
                     </div>
                     <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5">
-                      <div className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">МАКС. ВОЛНА</div>
+                      <div className="text-[9px] uppercase tracking-wider text-slate-500 font-mono">{t('maxWave').toUpperCase()}</div>
                       <div className="text-xl font-black font-mono text-indigo-400 mt-0.5">{bestWave}</div>
                     </div>
                   </div>
 
                   <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 mb-2.5 flex justify-between items-center">
-                    <span className="text-[10px] uppercase tracking-wider text-slate-400 font-mono">СБЕРЕЖЕНИЯ</span>
-                    <span className="text-base font-black font-mono text-amber-400">{bankCredits.toLocaleString()} кр.</span>
+                    <span className="text-[10px] uppercase tracking-wider text-slate-400 font-mono">{language === 'ru' ? 'СБЕРЕЖЕНИЯ' : 'SAVINGS'}</span>
+                    <span className="text-base font-black font-mono text-amber-400">{bankCredits.toLocaleString()} {t('creditsSuffix')}</span>
                   </div>
 
                   {/* Integrated Synergy Progress Bar */}
                   <div className="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5">
                     <div className="flex justify-between items-center text-[10px] font-mono mb-1">
-                      <span className="text-slate-400">СИНЕРГИИ</span>
+                      <span className="text-slate-400">{t('synergiesLabel').toUpperCase()}</span>
                       <span className="text-indigo-300 font-bold">{unlockedSynergies.length} / {TOTAL_SYNERGIES_COUNT}</span>
                     </div>
                     <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden">
@@ -761,13 +780,13 @@ export default function App() {
                     onClick={() => setActiveScreen('leaderboard')}
                     className="flex-1 vh-secondary-btn"
                   >
-                    🏆 Рекорды
+                    🏆 {t('records')}
                   </button>
                   <button
                     onClick={() => setActiveScreen('codex')}
                     className="flex-1 vh-secondary-btn text-amber-300 hover:text-amber-200"
                   >
-                    ⭐ Кодекс
+                    ⭐ {t('codex')}
                   </button>
                 </div>
               </div>
@@ -784,9 +803,9 @@ export default function App() {
                 className="w-full py-4 vh-primary-action text-white text-base sm:text-lg font-black uppercase tracking-widest cursor-pointer border border-cyan-400/30 flex items-center justify-center gap-3"
               >
                 <span className="text-xl sm:text-2xl animate-pulse">🚀</span>
-                <span>НАЧАТЬ ЗАБЕГ</span>
+                <span>{t('startGame')}</span>
                 <span className="text-xs sm:text-sm font-normal text-cyan-200/90 font-mono tracking-normal hidden sm:inline">
-                  • {selectedSector.name}
+                  • {getLocalizedSector(selectedSector, language).name}
                 </span>
               </button>
             </div>
@@ -794,8 +813,8 @@ export default function App() {
             {/* Bottom Status Bar */}
             <footer className="flex flex-col sm:flex-row justify-between items-center gap-2 mt-4 text-[9px] text-zinc-400 font-mono border-t border-zinc-800/60 pt-3">
               <div className="flex flex-wrap gap-3 items-center">
-                <span>🎮 Управление: WASD / Стрелки / Виртуальный джойстик</span>
-                <span>⏸ Пауза: Esc / P</span>
+                <span>{t('controlsHint')}</span>
+                <span>{t('pauseHint')}</span>
               </div>
               <div className="text-zinc-500 font-mono">
                 VOID HUNTER Engine 60Hz Fixed Simulation
@@ -811,15 +830,16 @@ export default function App() {
           <div className="w-full max-w-2xl vh-panel p-4 sm:p-6 shadow-2xl flex flex-col my-auto">
             <div className="text-center mb-3 sm:mb-6">
               <span className="text-[9px] sm:text-[10px] font-black tracking-widest text-indigo-400 uppercase bg-indigo-500/10 px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full border border-indigo-500/20 font-mono">
-                НОВЫЙ УРОВЕНЬ ОРУЖИЯ
+                {language === 'ru' ? 'НОВЫЙ УРОВЕНЬ ОРУЖИЯ' : 'WEAPON LEVEL UP'}
               </span>
-              <h2 className="text-lg sm:text-2xl font-black text-zinc-100 mt-2 sm:mt-4 tracking-wider">ВЫБЕРИ МОДИФИКАТОР</h2>
-              <p className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 sm:mt-1 font-mono">ТЕКУЩИЙ УРОВЕНЬ: <span className="text-indigo-400 font-bold">{currentLevel}</span></p>
+              <h2 className="text-lg sm:text-2xl font-black text-zinc-100 mt-2 sm:mt-4 tracking-wider">{t('newLevel')}</h2>
+              <p className="text-[10px] sm:text-xs text-zinc-400 mt-0.5 sm:mt-1 font-mono">{t('levelReached').toUpperCase()}: <span className="text-indigo-400 font-bold">{currentLevel}</span></p>
             </div>
 
             {/* List upgrade perks cards */}
             <div className="flex flex-col gap-2.5 sm:gap-3 max-h-[50dvh] sm:max-h-[52vh] overflow-y-auto pr-1">
               {currentUpgrades.map(u => {
+                const locU = getLocalizedUpgrade(u, language, activePlayer || undefined);
                 const rarColor =
                   u.rar === 'Legendary'
                     ? 'text-amber-400'
@@ -861,54 +881,54 @@ export default function App() {
                         </span>
                         {u.synergy && (
                           <span className="text-[8px] sm:text-[10px] font-black tracking-widest uppercase text-amber-300 bg-amber-500/15 px-1.5 py-0.5 rounded font-mono border border-amber-500/30">
-                            ★ {u.id.startsWith('syn_') ? 'ЭВОЛЮЦИЯ' : 'СИНЕРГИЯ'}
+                            ★ {u.id.startsWith('syn_') ? t('evolutionBadge') : (language === 'ru' ? 'СИНЕРГИЯ' : 'SYNERGY')}
                           </span>
                         )}
                         {u.currentLevel !== undefined && u.nextLevel !== undefined ? (
                           u.currentLevel === 0 ? (
                             <span className="text-[8px] sm:text-[9px] font-mono font-bold text-emerald-400 bg-emerald-500/15 px-1.5 py-0.5 rounded border border-emerald-500/25">
-                              ✨ НОВОЕ
+                              ✨ {language === 'ru' ? 'НОВОЕ' : 'NEW'}
                             </span>
                           ) : (
                             <span className="text-[8px] sm:text-[9px] font-mono font-bold text-cyan-300 bg-cyan-500/15 px-1.5 py-0.5 rounded border border-cyan-500/25">
-                              УР. {u.currentLevel} → {u.nextLevel}
+                              {t('levelPrefix').toUpperCase()} {u.currentLevel} → {u.nextLevel}
                             </span>
                           )
                         ) : null}
                       </div>
                       <h3 className="text-xs sm:text-sm font-black text-zinc-100 mt-0.5 sm:mt-1 group-hover:text-cyan-300 transition truncate">
-                        {u.name}
+                        {locU.name}
                       </h3>
-                      <p className="text-[11px] sm:text-xs text-slate-400 mt-1 leading-snug line-clamp-2">{u.desc}</p>
+                      <p className="text-[11px] sm:text-xs text-slate-400 mt-1 leading-snug line-clamp-2">{locU.desc}</p>
                       
                       {/* Stat Delta if available */}
-                      {u.statDelta && (
+                      {locU.statDelta && (
                         <div className="text-[9px] sm:text-[10px] text-emerald-400 font-mono mt-1 font-semibold flex items-center gap-1">
                           <span>▲</span>
-                          <span>{u.statDelta}</span>
+                          <span>{locU.statDelta}</span>
                         </div>
                       )}
 
                       {/* Synergy Requirements Checklist */}
-                      {u.synergyReqs && u.synergyReqs.length > 0 && (
+                      {locU.synergyReqs && locU.synergyReqs.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1.5">
-                          {u.synergyReqs.map(req => (
+                          {locU.synergyReqs.map((req, idx) => (
                             <span
-                              key={req.id}
+                              key={idx}
                               className={`text-[8px] sm:text-[9px] font-mono px-1.5 py-0.5 rounded border ${
                                 req.met
                                   ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
                                   : 'bg-zinc-800/60 border-zinc-700 text-zinc-500'
                               }`}
                             >
-                              {req.met ? '✓' : '○'} {req.name}
+                              {req.met ? '✓' : '○'} {req.text}
                             </span>
                           ))}
                         </div>
                       )}
                     </div>
                     <button className="ml-2.5 sm:ml-4 px-3 py-1.5 bg-slate-800 group-hover:bg-cyan-500 text-cyan-300 group-hover:text-slate-950 text-[10px] sm:text-xs font-bold rounded-lg border border-slate-700 group-hover:border-cyan-400 transition pointer-events-none font-mono flex-shrink-0">
-                      ВЫБРАТЬ
+                      {language === 'ru' ? 'ВЫБРАТЬ' : 'SELECT'}
                     </button>
                   </div>
                 );
@@ -917,7 +937,7 @@ export default function App() {
 
             {/* Reroll trigger options */}
             <div className="flex justify-between items-center mt-4 sm:mt-6 pt-2 sm:pt-4 border-t border-zinc-800/60">
-              <span className="text-[10px] sm:text-xs text-zinc-400 font-mono">РЕКОМПИЛИРОВАТЬ ДРЕВО</span>
+              <span className="text-[10px] sm:text-xs text-zinc-400 font-mono">{language === 'ru' ? 'РЕКОМПИЛИРОВАТЬ ДРЕВО' : 'RECOMPILE PERK TREE'}</span>
               <button
                 onClick={handleReroll}
                 disabled={rerolls <= 0}
@@ -927,7 +947,7 @@ export default function App() {
                     : 'bg-transparent text-zinc-600 border border-zinc-850 cursor-not-allowed'
                 }`}
               >
-                🔄 РЕКОМПИЛЯЦИЯ ({rerolls})
+                🔄 {t('reroll').toUpperCase()} ({rerolls})
               </button>
             </div>
           </div>
@@ -943,16 +963,16 @@ export default function App() {
             <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3 mb-3">
               <div className="text-left">
                 <span className="text-[9px] font-black tracking-widest text-indigo-400 uppercase bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20 font-mono">
-                  ТАКТИЧЕСКИЙ РЕЖИМ
+                  {language === 'ru' ? 'ТАКТИЧЕСКИЙ РЕЖИМ' : 'TACTICAL OVERVIEW'}
                 </span>
                 <h2 className="text-lg sm:text-xl font-black text-zinc-100 mt-1 tracking-wider font-sans">
-                  НАУЧНАЯ ПАУЗА
+                  {t('paused')}
                 </h2>
               </div>
               <button
                 onClick={() => setActiveScreen('playing')}
                 className="p-1.5 text-zinc-400 hover:text-white rounded-lg hover:bg-zinc-800 transition cursor-pointer font-mono text-sm"
-                title="Продолжить бой"
+                title={t('resume')}
               >
                 ✕
               </button>
@@ -965,17 +985,17 @@ export default function App() {
               <div className="bg-zinc-950/70 border border-zinc-800/80 rounded-2xl p-3 sm:p-4">
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <span>⚡ ТЕКУЩИЙ БИЛД КОРАБЛЯ</span>
+                    <span>⚡ {t('currentBuild')}</span>
                   </h3>
                   {activePlayer && (
                     <span className="text-[9px] font-mono text-indigo-400 font-semibold">
-                      УРОВЕНЬ {currentLevel}
+                      {t('level').toUpperCase()} {currentLevel}
                     </span>
                   )}
                 </div>
 
                 {(() => {
-                  const build = activePlayer ? getPlayerBuild(activePlayer) : { weapons: [], passives: [], rocketPerks: [] };
+                  const build = activePlayer ? getPlayerBuild(activePlayer, language) : { weapons: [], passives: [], rocketPerks: [] };
                   const hasWeapons = build.weapons.length > 0;
                   const hasPassives = build.passives.length > 0;
                   const hasRockets = build.rocketPerks.length > 0;
@@ -983,7 +1003,7 @@ export default function App() {
                   if (!hasWeapons && !hasPassives && !hasRockets) {
                     return (
                       <div className="text-xs text-zinc-500 font-mono py-2 text-center">
-                        Базовое вооружение: Реактивная пушка. Модификаторы ещё не установлены.
+                        {t('emptyBuildNotice')}
                       </div>
                     );
                   }
@@ -994,7 +1014,7 @@ export default function App() {
                       {hasWeapons && (
                         <div>
                           <div className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest mb-1.5">
-                            Оружейные системы:
+                            {t('weapons')}:
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                             {build.weapons.map(w => (
@@ -1010,7 +1030,7 @@ export default function App() {
                                 <div className="min-w-0 flex-1">
                                   <div className="text-[11px] font-bold truncate leading-tight">{w.name}</div>
                                   <div className="text-[9px] text-zinc-400">
-                                    {w.isEvolved ? '★ ЭВОЛЮЦИЯ' : `Ур. ${w.level} / ${w.maxLevel}`}
+                                    {w.isEvolved ? ('★ ' + t('evolutionBadge')) : `${t('levelPrefix')} ${w.level} / ${w.maxLevel}`}
                                   </div>
                                 </div>
                               </div>
@@ -1023,7 +1043,7 @@ export default function App() {
                       {hasPassives && (
                         <div>
                           <div className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest mb-1.5">
-                            Пассивные модули:
+                            {t('passives')}:
                           </div>
                           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                             {build.passives.map(p => (
@@ -1035,7 +1055,7 @@ export default function App() {
                                 <div className="min-w-0 flex-1">
                                   <div className="text-[11px] font-bold truncate leading-tight">{p.name}</div>
                                   <div className="text-[9px] text-indigo-400">
-                                    Ур. {p.level} / {p.maxLevel}
+                                    {t('levelPrefix')} {p.level} / {p.maxLevel}
                                   </div>
                                 </div>
                               </div>
@@ -1048,7 +1068,7 @@ export default function App() {
                       {hasRockets && (
                         <div>
                           <div className="text-[9px] font-mono text-zinc-500 uppercase tracking-widest mb-1">
-                            Ракетные мутации:
+                            {t('rocketPerks')}:
                           </div>
                           <div className="flex flex-wrap gap-1.5">
                             {build.rocketPerks.map(r => (
@@ -1070,16 +1090,16 @@ export default function App() {
               {/* Visual Effects & Performance Settings */}
               <div className="bg-zinc-950/70 border border-zinc-800/80 rounded-2xl p-3 sm:p-4">
                 <h3 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider mb-2.5">
-                  ⚙️ ВИЗУАЛЬНЫЕ ЭФФЕКТЫ И ПРОИЗВОДИТЕЛЬНОСТЬ
+                  ⚙️ {t('settingsHeader')}
                 </h3>
                 
                 <div className="space-y-2.5 text-xs font-mono">
                   {/* Camera Shake */}
                   <div className="flex items-center justify-between">
-                    <span className="text-zinc-300 text-[11px]">Тряска камеры:</span>
+                    <span className="text-zinc-300 text-[11px]">{t('screenShake')}:</span>
                     <div className="inline-flex rounded-lg border border-zinc-800 p-0.5 bg-zinc-900">
                       {[
-                        { label: 'Выкл', val: 0 },
+                        { label: t('shakeOff'), val: 0 },
                         { label: '50%', val: 0.5 },
                         { label: '100%', val: 1.0 },
                       ].map(opt => (
@@ -1100,7 +1120,7 @@ export default function App() {
 
                   {/* Screen Flash */}
                   <div className="flex items-center justify-between">
-                    <span className="text-zinc-300 text-[11px]">Вспышки экрана:</span>
+                    <span className="text-zinc-300 text-[11px]">{t('flashEffects')}:</span>
                     <button
                       onClick={() => updateSettings({ flashEnabled: !settings.flashEnabled })}
                       className={`px-3 py-1 text-[10px] font-bold rounded-lg border transition cursor-pointer ${
@@ -1109,18 +1129,18 @@ export default function App() {
                           : 'bg-zinc-900 border-zinc-800 text-zinc-500'
                       }`}
                     >
-                      {settings.flashEnabled ? '✓ ВКЛЮЧЕНЫ' : '✕ ВЫКЛЮЧЕНЫ'}
+                      {settings.flashEnabled ? `✓ ${t('on')}` : `✕ ${t('off')}`}
                     </button>
                   </div>
 
                   {/* Particles */}
                   <div className="flex items-center justify-between">
-                    <span className="text-zinc-300 text-[11px]">Частицы:</span>
+                    <span className="text-zinc-300 text-[11px]">{t('graphicsQuality')}:</span>
                     <div className="inline-flex rounded-lg border border-zinc-800 p-0.5 bg-zinc-900">
                       {[
-                        { label: 'Низкая', val: 'low' as const },
-                        { label: 'Средняя', val: 'medium' as const },
-                        { label: 'Высокая', val: 'high' as const },
+                        { label: t('gfxLow'), val: 'low' as const },
+                        { label: t('gfxMed'), val: 'medium' as const },
+                        { label: t('gfxHigh'), val: 'high' as const },
                       ].map(opt => (
                         <button
                           key={opt.val}
@@ -1136,13 +1156,36 @@ export default function App() {
                       ))}
                     </div>
                   </div>
+
+                  {/* Language switch in pause */}
+                  <div className="flex items-center justify-between pt-1 border-t border-zinc-800/60">
+                    <span className="text-zinc-300 text-[11px]">{t('language')}:</span>
+                    <div className="inline-flex rounded-lg border border-zinc-800 p-0.5 bg-zinc-900">
+                      <button
+                        onClick={() => setLanguage('ru')}
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition cursor-pointer ${
+                          language === 'ru' ? 'bg-indigo-600 text-white' : 'text-zinc-400 hover:text-zinc-200'
+                        }`}
+                      >
+                        RU
+                      </button>
+                      <button
+                        onClick={() => setLanguage('en')}
+                        className={`px-2.5 py-1 text-[10px] font-bold rounded-md transition cursor-pointer ${
+                          language === 'en' ? 'bg-indigo-600 text-white' : 'text-zinc-400 hover:text-zinc-200'
+                        }`}
+                      >
+                        EN
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               {/* Sound & Audio */}
               <div className="bg-zinc-950/70 border border-zinc-800/80 rounded-2xl p-3 sm:p-4">
                 <h3 className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider mb-2">
-                  🔊 АУДИО
+                  🔊 {t('audioSettings')}
                 </h3>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -1153,7 +1196,7 @@ export default function App() {
                         : 'bg-zinc-900 text-zinc-500 border-zinc-800'
                     }`}
                   >
-                    {isMuted ? '🔇 SFX: ВЫКЛ' : '🔊 SFX: ВКЛ'}
+                    {isMuted ? `🔇 SFX: ${t('off')}` : `🔊 SFX: ${t('on')}`}
                   </button>
                   <button
                     onClick={handleMusicToggle}
@@ -1163,7 +1206,7 @@ export default function App() {
                         : 'bg-zinc-900 text-zinc-500 border-zinc-800'
                     }`}
                   >
-                    {isMusicMuted ? '🔇 МУЗЫКА: ВЫКЛ' : '🎵 МУЗЫКА: ВКЛ'}
+                    {isMusicMuted ? `🔇 ${t('music')}: ${t('off')}` : `🎵 ${t('music')}: ${t('on')}`}
                   </button>
                 </div>
               </div>
@@ -1175,13 +1218,13 @@ export default function App() {
                 onClick={() => setActiveScreen('playing')}
                 className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black uppercase tracking-wider rounded-xl transition cursor-pointer font-mono shadow-[0_0_15px_rgba(99,102,241,0.3)]"
               >
-                ▶ ПРОДОЛЖИТЬ ВЫЛЕТ
+                ▶ {t('resume').toUpperCase()}
               </button>
               <button
                 onClick={() => setActiveScreen('menu')}
                 className="py-2.5 px-4 bg-zinc-800 hover:bg-zinc-750 text-zinc-300 hover:text-white text-xs font-bold uppercase tracking-wider rounded-xl transition border border-zinc-700 cursor-pointer font-mono"
               >
-                В МЕНЮ
+                {t('toMenu').toUpperCase()}
               </button>
             </div>
 
@@ -1195,26 +1238,28 @@ export default function App() {
           <div className="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center max-h-[92vh] overflow-y-auto bento-glow-indigo">
             <span className="text-3xl">💀</span>
             <div className="text-[10px] uppercase font-bold tracking-widest text-zinc-400 mt-2 bg-indigo-950/30 px-3 py-1 rounded-full border border-indigo-500/25 text-indigo-300 font-mono">
-              НОВАЯ ЗАПИСЬ БОРТОВОГО КОМПЬЮТЕРА
+              {language === 'ru' ? 'НОВАЯ ЗАПИСЬ БОРТОВОГО КОМПЬЮТЕРА' : 'FLIGHT LOG RECORD ENTRY'}
             </div>
-            <h2 className="text-2xl font-black tracking-wider text-zinc-100 mt-3 uppercase font-sans">Забег Завершен</h2>
+            <h2 className="text-2xl font-black tracking-wider text-zinc-100 mt-3 uppercase font-sans">
+              {language === 'ru' ? 'Забег Завершен' : 'Expedition Terminated'}
+            </h2>
             
             <div className="text-5xl font-black text-yellow-400 drop-shadow-[0_0_20px_rgba(251,191,36,0.25)] my-4 font-mono">
-              {endPayload.score.toLocaleString()} ОЧКОВ
+              {endPayload.score.toLocaleString()} {t('pointsWon').toUpperCase()}
             </div>
 
             {/* Run score parameters columns */}
             <div className="grid grid-cols-3 gap-2 w-full my-3 p-3 bg-zinc-950/70 rounded-xl border border-zinc-800">
               <div>
-                <div className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Уровень</div>
+                <div className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">{t('statsLevel')}</div>
                 <div className="text-base font-black text-indigo-400 font-mono">{endPayload.level}</div>
               </div>
               <div>
-                <div className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Волна</div>
+                <div className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">{t('statsWave')}</div>
                 <div className="text-base font-black text-purple-400 font-mono">{endPayload.wave}</div>
               </div>
               <div>
-                <div className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">Кредиты</div>
+                <div className="text-[9px] uppercase tracking-wider text-zinc-500 font-mono">{t('statsCredits')}</div>
                 <div className="text-base font-black text-yellow-400 font-mono">+{endPayload.credits}</div>
               </div>
             </div>
@@ -1227,7 +1272,7 @@ export default function App() {
 
             {/* Upgrades selected lists */}
             <div className="w-full mt-4 text-left">
-              <div className="text-[10px] font-black text-zinc-400 tracking-wider mb-2 uppercase font-mono">АКТИВИРОВАННЫЕ МОДИФИКАЦИИ:</div>
+              <div className="text-[10px] font-black text-zinc-400 tracking-wider mb-2 uppercase font-mono">{t('collectedBuildHeader').toUpperCase()}</div>
               <div className="flex flex-wrap gap-1.5 max-h-[14vh] overflow-y-auto pr-1 pb-1">
                 {endPayload.tags.length > 0 ? (
                   endPayload.tags.map((tg, i) => (
@@ -1237,7 +1282,7 @@ export default function App() {
                     </span>
                   ))
                 ) : (
-                  <span className="text-xs text-zinc-500">Нет установленных модификаторов</span>
+                  <span className="text-xs text-zinc-500">{t('noUpgradesTaken')}</span>
                 )}
               </div>
             </div>
@@ -1248,13 +1293,13 @@ export default function App() {
                 onClick={handleStartRun}
                 className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white text-xs font-black uppercase tracking-wider rounded-xl transition cursor-pointer font-mono"
               >
-                🔄 ПОВТОРИТЬ ПРЫЖОК
+                🔄 {t('playAgain').toUpperCase()}
               </button>
               <button
                 onClick={() => setActiveScreen('menu')}
                 className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-750 text-zinc-300 hover:text-white text-xs font-bold uppercase tracking-wider rounded-xl transition border border-zinc-700 cursor-pointer font-mono"
               >
-                🏠 ВЕРНУТЬСЯ В ГАВАНЬ
+                🏠 {t('toMenu').toUpperCase()}
               </button>
             </div>
           </div>
@@ -1335,10 +1380,10 @@ export default function App() {
             <div className="flex items-center justify-between border-b border-zinc-800/80 pb-3 mb-4">
               <div>
                 <span className="text-[9px] font-black tracking-widest text-indigo-400 uppercase bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20 font-mono">
-                  КОНФИГУРАЦИЯ
+                  {language === 'ru' ? 'КОНФИГУРАЦИЯ' : 'CONFIGURATION'}
                 </span>
                 <h2 className="text-xl font-black text-zinc-100 mt-1 tracking-wider font-sans">
-                  НАСТРОЙКИ СИСТЕМЫ
+                  {t('settingsHeader')}
                 </h2>
               </div>
               <button
@@ -1350,15 +1395,47 @@ export default function App() {
             </div>
 
             <div className="space-y-4 font-mono text-xs">
+              {/* Language Selection */}
+              <div className="p-3 bg-zinc-950/70 border border-zinc-800/80 rounded-xl flex items-center justify-between">
+                <div>
+                  <div className="text-zinc-200 font-bold">{t('languageSetting')}</div>
+                  <div className="text-[10px] text-zinc-400">{t('languageSettingDesc')}</div>
+                </div>
+                <div className="inline-flex rounded-lg border border-zinc-800 p-0.5 bg-zinc-900">
+                  <button
+                    onClick={() => setLanguage('ru')}
+                    className={`px-3 py-1.5 text-[10px] font-bold rounded-md transition cursor-pointer flex items-center gap-1.5 ${
+                      language === 'ru'
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'text-zinc-400 hover:text-zinc-200'
+                    }`}
+                  >
+                    <span>🇷🇺</span>
+                    <span>Русский</span>
+                  </button>
+                  <button
+                    onClick={() => setLanguage('en')}
+                    className={`px-3 py-1.5 text-[10px] font-bold rounded-md transition cursor-pointer flex items-center gap-1.5 ${
+                      language === 'en'
+                        ? 'bg-indigo-600 text-white shadow-sm'
+                        : 'text-zinc-400 hover:text-zinc-200'
+                    }`}
+                  >
+                    <span>🇬🇧</span>
+                    <span>English</span>
+                  </button>
+                </div>
+              </div>
+
               {/* Camera Shake */}
               <div className="p-3 bg-zinc-950/70 border border-zinc-800/80 rounded-xl flex items-center justify-between">
                 <div>
-                  <div className="text-zinc-200 font-bold">Тряска камеры</div>
-                  <div className="text-[10px] text-zinc-400">Интенсивность сотрясения при взрывах</div>
+                  <div className="text-zinc-200 font-bold">{t('screenShake')}</div>
+                  <div className="text-[10px] text-zinc-400">{t('screenShakeDesc')}</div>
                 </div>
                 <div className="inline-flex rounded-lg border border-zinc-800 p-0.5 bg-zinc-900">
                   {[
-                    { label: '0%', val: 0 },
+                    { label: t('shakeOff'), val: 0 },
                     { label: '50%', val: 0.5 },
                     { label: '100%', val: 1.0 },
                   ].map(opt => (
@@ -1380,8 +1457,8 @@ export default function App() {
               {/* Screen Flash */}
               <div className="p-3 bg-zinc-950/70 border border-zinc-800/80 rounded-xl flex items-center justify-between">
                 <div>
-                  <div className="text-zinc-200 font-bold">Вспышки экрана</div>
-                  <div className="text-[10px] text-zinc-400">Яркие световые импульсы при уроне</div>
+                  <div className="text-zinc-200 font-bold">{t('flashEffects')}</div>
+                  <div className="text-[10px] text-zinc-400">{t('flashEffectsDesc')}</div>
                 </div>
                 <button
                   onClick={() => updateSettings({ flashEnabled: !settings.flashEnabled })}
@@ -1391,21 +1468,21 @@ export default function App() {
                       : 'bg-zinc-900 border-zinc-800 text-zinc-500'
                   }`}
                 >
-                  {settings.flashEnabled ? '✓ ВКЛЮЧЕНЫ' : '✕ ВЫКЛЮЧЕНЫ'}
+                  {settings.flashEnabled ? `✓ ${t('on')}` : `✕ ${t('off')}`}
                 </button>
               </div>
 
               {/* Particles */}
               <div className="p-3 bg-zinc-950/70 border border-zinc-800/80 rounded-xl flex items-center justify-between">
                 <div>
-                  <div className="text-zinc-200 font-bold">Частицы и искры</div>
-                  <div className="text-[10px] text-zinc-400">Плотность визуальных эффектов боя</div>
+                  <div className="text-zinc-200 font-bold">{t('graphicsQuality')}</div>
+                  <div className="text-[10px] text-zinc-400">{t('graphicsQualityDesc')}</div>
                 </div>
                 <div className="inline-flex rounded-lg border border-zinc-800 p-0.5 bg-zinc-900">
                   {[
-                    { label: 'НИЗ', val: 'low' as const },
-                    { label: 'СРЕД', val: 'medium' as const },
-                    { label: 'ВЫС', val: 'high' as const },
+                    { label: t('gfxLow'), val: 'low' as const },
+                    { label: t('gfxMed'), val: 'medium' as const },
+                    { label: t('gfxHigh'), val: 'high' as const },
                   ].map(opt => (
                     <button
                       key={opt.val}
@@ -1425,8 +1502,8 @@ export default function App() {
               {/* Audio quick toggles */}
               <div className="p-3 bg-zinc-950/70 border border-zinc-800/80 rounded-xl flex items-center justify-between">
                 <div>
-                  <div className="text-zinc-200 font-bold">Звук и музыка</div>
-                  <div className="text-[10px] text-zinc-400">Громкость и дорожки</div>
+                  <div className="text-zinc-200 font-bold">{t('audioSettings')}</div>
+                  <div className="text-[10px] text-zinc-400">{t('audioSettingsDesc')}</div>
                 </div>
                 <div className="flex gap-1.5">
                   <button
@@ -1447,7 +1524,7 @@ export default function App() {
                         : 'bg-zinc-900 text-zinc-500 border-zinc-800'
                     }`}
                   >
-                    {isMusicMuted ? '🔇' : '🎵'} МУЗЫКА
+                    {isMusicMuted ? '🔇' : '🎵'} {t('music')}
                   </button>
                 </div>
               </div>
@@ -1457,7 +1534,7 @@ export default function App() {
               onClick={() => setShowSettingsModal(false)}
               className="w-full mt-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black uppercase tracking-wider rounded-xl transition cursor-pointer font-mono"
             >
-              СОХРАНИТЬ И ЗАКРЫТЬ
+              {language === 'ru' ? 'СОХРАНИТЬ И ЗАКРЫТЬ' : 'SAVE & CLOSE'}
             </button>
           </div>
         </div>

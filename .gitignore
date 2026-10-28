@@ -8,4 +8,8 @@ bot_log.txt
 ai-exchange/
 .env*
 !.env.example
+__pycache__/
+*.pyc
+leaderboard*.json
+leaderboard*.tmp
 

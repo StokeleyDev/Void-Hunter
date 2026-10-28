@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react';
-import { GameState, Enemy, Bullet, EnemyBullet, Gem, Particle, LightningBolt, Player, Skin, RocketSkin, SectorConfig, SECTORS, DamageNumber, SuperPickup, SuperPickupType, GameSettings } from '../types';
+import { GameState, Enemy, Bullet, EnemyBullet, Gem, Particle, LightningBolt, Player, Skin, RocketSkin, SectorConfig, SECTORS, DamageNumber, SuperPickup, SuperPickupType, GameSettings, getLocalizedSector } from '../types';
 import { spawnEnemy, spawnMiniBoss, spawnBoss } from '../utils/enemies';
 import { drawProceduralEnemy, drawProceduralRocket, drawProceduralPlayer } from '../utils/textures';
 import { Sound } from '../utils/sound';
@@ -12,6 +12,7 @@ import { Music } from '../utils/music';
 import { spd, getWeaponLevel } from '../utils/upgrades';
 import { SpatialHash } from '../utils/spatial-hash';
 import { PerkIcon, BossIcon, getShipIcon, getBossIcon } from '../utils/icons';
+import { useI18n, tDirect } from '../i18n';
 
 // Simple random coordinate ranges support
 const rnd = (a: number, b: number) => Math.random() * (b - a) + a;
@@ -45,6 +46,10 @@ export default function GameCanvas({
   gameTick,
   settings,
 }: GameCanvasProps) {
+  const { t, language } = useI18n();
+  const languageRef = useRef(language);
+  languageRef.current = language;
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Store latest callbacks and props in a ref to permanently eliminate stale closures in rAF
@@ -57,6 +62,7 @@ export default function GameCanvas({
     state,
     selectedSector,
     settings,
+    language,
   });
   callbacksRef.current = {
     onEndRun,
@@ -67,6 +73,7 @@ export default function GameCanvas({
     state,
     selectedSector,
     settings,
+    language,
   };
 
   // Single-fire transition guards: ensure victory and death trigger exactly once per run
@@ -2976,7 +2983,7 @@ export default function GameCanvas({
             ctx.font = '900 10px "Exo 2", sans-serif';
             ctx.textAlign = 'center';
             ctx.fillStyle = '#e9d5ff';
-            ctx.fillText('⚡ ИОННЫЙ УДАР', hz.x, hz.y);
+            ctx.fillText(tDirect('ionStrike', undefined, languageRef.current), hz.x, hz.y);
           } else if (hz.active) {
             ctx.strokeStyle = '#f3e8ff';
             ctx.lineWidth = 4;
@@ -3058,7 +3065,7 @@ export default function GameCanvas({
             ctx.font = '900 10px "Exo 2", sans-serif';
             ctx.textAlign = 'center';
             ctx.fillStyle = '#fda4af';
-            ctx.fillText('⚠️ ГРАВИ-ВОЗМУЩЕНИЕ', vx.x, vx.y);
+            ctx.fillText(tDirect('gravitySurge', undefined, languageRef.current), vx.x, vx.y);
           } else if (vx.active) {
             const spin = G.current.frame * 0.08;
             ctx.fillStyle = 'rgba(15, 23, 42, 0.4)';
@@ -3977,10 +3984,10 @@ export default function GameCanvas({
             <div className="fixed inset-x-0 top-1/4 flex flex-col items-center pointer-events-none animate-bounce z-40 px-4">
               <div className="bg-rose-950/90 border-2 border-rose-500 px-6 py-3.5 rounded-2xl shadow-[0_0_60px_rgba(244,63,94,0.7)] backdrop-blur-md text-center max-w-md">
                 <div className="text-rose-400 font-black tracking-widest text-xs uppercase animate-pulse flex items-center justify-center gap-1.5">
-                  <span>🚨</span> ТРЕВОГА СИСТЕМЫ ОБОРОНЫ <span>🚨</span>
+                  <span>🚨</span> {t('defenseAlert')} <span>🚨</span>
                 </div>
                 <div className="text-lg sm:text-2xl font-black text-white mt-1 uppercase tracking-wide">
-                  ПРИБЛИЖАЕТСЯ ФЛАГМАН СЕКТОРА!
+                  {t('flagshipApproaching')}
                 </div>
               </div>
             </div>
@@ -3991,22 +3998,22 @@ export default function GameCanvas({
             <div className="flex flex-col gap-1.5 sm:gap-2 pointer-events-auto">
               <div className="flex gap-1 sm:gap-2">
                 <div className="px-2 py-1 bg-slate-900/80 border border-cyan-500/10 rounded-lg sm:rounded-xl backdrop-blur-md">
-                  <div className="text-[8px] sm:text-[9px] uppercase tracking-widest text-slate-400 font-extrabold">Счёт</div>
+                  <div className="text-[8px] sm:text-[9px] uppercase tracking-widest text-slate-400 font-extrabold">{t('score')}</div>
                   <div className="text-xs sm:text-sm font-black text-cyan-400">{hudInfo.score}</div>
                 </div>
                 <div className="px-2 py-1 bg-slate-900/80 border border-cyan-500/10 rounded-lg sm:rounded-xl backdrop-blur-md">
-                  <div className="text-[8px] sm:text-[9px] uppercase tracking-widest text-slate-400 font-extrabold">Волна</div>
+                  <div className="text-[8px] sm:text-[9px] uppercase tracking-widest text-slate-400 font-extrabold">{t('wave')}</div>
                   <div className="text-xs sm:text-sm font-black text-cyan-400">{hudInfo.wave}</div>
                 </div>
                 <div className="px-2 py-1 bg-slate-900/80 border border-cyan-500/10 rounded-lg sm:rounded-xl backdrop-blur-md">
-                  <div className="text-[8px] sm:text-[9px] uppercase tracking-widest text-slate-400 font-extrabold">Уровень</div>
+                  <div className="text-[8px] sm:text-[9px] uppercase tracking-widest text-slate-400 font-extrabold">{t('level')}</div>
                   <div className="text-xs sm:text-sm font-black text-cyan-400">{hudInfo.level}</div>
                 </div>
               </div>
               {/* Health hull safety stats */}
               <div className="w-[110px] xs:w-[130px] sm:w-48 bg-slate-950/80 p-1.5 sm:p-2.5 rounded-xl border border-slate-800 backdrop-blur-sm flex flex-col gap-0.5 sm:gap-1">
                 <div className="flex justify-between items-center text-[7px] sm:text-[10px] font-black tracking-widest text-slate-300">
-                  <span>КОРПУС</span>
+                  <span>{t('hull')}</span>
                   <span className="text-cyan-400">{Math.round(hudInfo.hpPercent)}%</span>
                 </div>
                 <div className="w-full h-1 sm:h-2 bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-700/50">
@@ -4046,7 +4053,7 @@ export default function GameCanvas({
                 <div className="px-3 py-1 bg-amber-500/10 border border-amber-500/30 rounded-xl backdrop-blur-md flex items-center gap-1.5 shadow-[0_0_15px_rgba(245,158,11,0.2)]">
                   <span className="text-amber-400 text-xs">♾️</span>
                   <span className="text-[8px] sm:text-xs font-bold text-amber-300 uppercase tracking-widest font-mono">
-                    БЕСКОНЕЧНЫЙ РЕЖИМ
+                    {t('endlessMode')}
                   </span>
                 </div>
               ) : (
@@ -4054,7 +4061,7 @@ export default function GameCanvas({
                 <div className="w-full bg-slate-950/85 border border-slate-800/90 rounded-xl p-1.5 sm:p-2 backdrop-blur-sm shadow-lg">
                   <div className="flex justify-between items-center text-[7px] sm:text-[10px] font-black tracking-widest text-slate-300 mb-0.5">
                     <span className="text-sky-300 flex items-center gap-1 truncate">
-                      <span>🌌</span> {selectedSector?.name || 'Сектор 1'}
+                      <span>🌌</span> {getLocalizedSector(selectedSector, language)?.name || 'Sector 1'}
                     </span>
                     <span className="font-mono text-sky-400 font-bold ml-1">{Math.round(hudInfo.sectorProgress)}%</span>
                   </div>
@@ -4080,14 +4087,14 @@ export default function GameCanvas({
                   onClick={() => onStateChange('pause')}
                   className="pointer-events-auto min-h-11 px-3 py-2 bg-slate-900/90 hover:bg-slate-800 border border-slate-700 rounded-lg sm:rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-300 hover:text-white transition cursor-pointer select-none"
                 >
-                  ⏸ Пауза
+                  {t('pause')}
                 </button>
               </div>
 
               {/* EXP Progress tracking Bar */}
               <div className="w-[110px] xs:w-[130px] sm:w-48 bg-slate-950/80 p-1.5 sm:p-2.5 rounded-xl border border-slate-850 backdrop-blur-sm flex flex-col gap-0.5 sm:gap-1">
                 <div className="flex justify-between items-center text-[7px] sm:text-[10px] font-black tracking-widest text-slate-300">
-                  <span>ОПЫТ</span>
+                  <span>{t('exp')}</span>
                   <span className="text-purple-400">{Math.round(hudInfo.xpPercent)}%</span>
                 </div>
                 <div className="w-full h-1 sm:h-2 bg-slate-850 rounded-full overflow-hidden p-0.5 border border-slate-800/40">
@@ -4101,7 +4108,7 @@ export default function GameCanvas({
               {/* Auxiliary lasers indicators */}
               {hudInfo.hasLaser && (
                 <div className="w-[110px] xs:w-[130px] sm:w-48 bg-slate-950/80 p-1 sm:p-2 rounded-lg border border-slate-850 backdrop-blur-sm flex items-center justify-between gap-1">
-                  <span className="text-[7px] sm:text-[9px] font-black tracking-wider text-slate-400">ЛАЗЕР:</span>
+                  <span className="text-[7px] sm:text-[9px] font-black tracking-wider text-slate-400">{t('laser')}</span>
                   <div className="flex-1 h-1 bg-slate-900 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-yellow-400 transition-all"

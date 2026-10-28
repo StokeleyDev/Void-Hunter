@@ -4,8 +4,9 @@
  */
 
 import React, { useState } from 'react';
-import { Skin, RocketSkin } from '../types';
+import { Skin, RocketSkin, getLocalizedSkin, getLocalizedRocketSkin } from '../types';
 import { ShipIcon, RocketIcon } from '../utils/icons';
+import { useI18n } from '../i18n';
 
 interface HangarScreenProps {
   bankCredits: number;
@@ -32,12 +33,14 @@ export default function HangarScreen({
   onUnlockRocketSkin,
   onClose,
 }: HangarScreenProps) {
+  const { t, language } = useI18n();
   const [activeTab, setActiveTab] = useState<'ships' | 'rockets'>('ships');
   const [passwordModal, setPasswordModal] = useState<{ skinId: string; name: string; price: number } | null>(null);
   const [passwordInput, setPasswordInput] = useState('');
   const [errorText, setErrorText] = useState('');
 
-  const handleSkinClick = (s: Skin) => {
+  const handleSkinClick = (rawS: Skin) => {
+    const s = getLocalizedSkin(rawS, language);
     if (s.owned) {
       onSelectSkin(s.id);
     } else {
@@ -50,20 +53,21 @@ export default function HangarScreen({
         if (bankCredits >= s.price) {
           onUnlockSkin(s.id);
         } else {
-          alert('Недостаточно кредитов!');
+          alert(t('insufficientCreditsAlert'));
         }
       }
     }
   };
 
-  const handleRocketClick = (r: RocketSkin) => {
+  const handleRocketClick = (rawR: RocketSkin) => {
+    const r = getLocalizedRocketSkin(rawR, language);
     if (r.owned) {
       onSelectRocketSkin(r.id);
     } else {
       if (bankCredits >= r.price) {
         onUnlockRocketSkin(r.id);
       } else {
-        alert('Недостаточно кредитов!');
+        alert(t('insufficientCreditsAlert'));
       }
     }
   };
@@ -74,7 +78,7 @@ export default function HangarScreen({
     if (success) {
       setPasswordModal(null);
     } else {
-      setErrorText('Неверный код доступа!');
+      setErrorText(t('invalidCodeError'));
     }
   };
 
@@ -84,7 +88,7 @@ export default function HangarScreen({
       onUnlockSkin(passwordModal.skinId, '_BUY_WITH_CREDITS_');
       setPasswordModal(null);
     } else {
-      setErrorText('Недостаточно кредитов для покупки!');
+      setErrorText(t('insufficientCreditsError'));
     }
   };
 
@@ -94,8 +98,8 @@ export default function HangarScreen({
         {/* Hangar Header */}
         <div className="flex justify-between items-center border-b border-slate-800 pb-3 mb-4">
           <div>
-            <h2 className="text-xl sm:text-2xl font-black tracking-wider text-slate-100 font-sans">АНГАР ИСКАТЕЛЯ</h2>
-            <p className="text-xs text-slate-400 mt-0.5 font-mono">БАЛАНС: <span className="text-amber-400 font-bold">{bankCredits.toLocaleString()} кр.</span></p>
+            <h2 className="text-xl sm:text-2xl font-black tracking-wider text-slate-100 font-sans">{t('hangarTitle')}</h2>
+            <p className="text-xs text-slate-400 mt-0.5 font-mono">{t('balanceLabel')} <span className="text-amber-400 font-bold">{bankCredits.toLocaleString()} {t('creditsSuffix')}</span></p>
           </div>
           <button
             onClick={onClose}
@@ -115,7 +119,7 @@ export default function HangarScreen({
                 : 'bg-transparent text-zinc-500 border border-transparent hover:text-zinc-200'
             }`}
           >
-            🚀 Корабли
+            {t('shipsTab')}
           </button>
           <button
             onClick={() => setActiveTab('rockets')}
@@ -125,7 +129,7 @@ export default function HangarScreen({
                 : 'bg-transparent text-zinc-500 border border-transparent hover:text-zinc-200'
             }`}
           >
-            🚀 Скины Ракет
+            {t('rocketsTab')}
           </button>
         </div>
 
@@ -133,7 +137,8 @@ export default function HangarScreen({
         <div className="flex-1 overflow-y-auto pr-1">
           {activeTab === 'ships' ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {skins.map(s => {
+              {skins.map(rawS => {
+                const s = getLocalizedSkin(rawS, language);
                 const bgGrad = s.gradient
                   ? `linear-gradient(135deg, ${s.gradient.join(',')})`
                   : s.col;
@@ -161,18 +166,18 @@ export default function HangarScreen({
                         />
                       </div>
                       <h4 className="font-bold text-sm text-zinc-100 mt-2">{s.name}</h4>
-                      <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-0.5 font-mono">Класс корпуса</p>
+                      <p className="text-[10px] text-zinc-500 uppercase tracking-widest mt-0.5 font-mono">{t('hullClass')}</p>
                     </div>
                     <div className="mt-3">
                       {s.owned ? (
                         <div className={`text-xs font-bold py-1.5 rounded-lg font-mono ${
                           isSelected ? 'text-indigo-400 font-black' : 'text-zinc-500 hover:text-zinc-300'
                         }`}>
-                          {isSelected ? '✓ АКТИВИРОВАН' : 'ВЫБРАТЬ'}
+                          {isSelected ? t('activatedShip') : t('selectShipAction')}
                         </div>
                       ) : (
                         <div className="text-[11px] font-black bg-zinc-800 text-zinc-300 py-1.5 rounded-lg border border-zinc-700 font-mono">
-                          {s.password ? '🔑 КОД / ' : ''}{s.price} КР.
+                          {s.password ? t('codeOrPrice') : ''}{s.price} {t('creditsSuffix').toUpperCase()}
                         </div>
                       )}
                     </div>
@@ -182,7 +187,8 @@ export default function HangarScreen({
             </div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {rocketSkins.map(r => {
+              {rocketSkins.map(rawR => {
+                const r = getLocalizedRocketSkin(rawR, language);
                 const isSelected = selectedRocketSkin === r.id;
                 return (
                   <div
@@ -208,11 +214,11 @@ export default function HangarScreen({
                         <div className={`text-xs font-bold py-1.5 rounded-lg font-mono ${
                           isSelected ? 'text-emerald-450 font-black' : 'text-zinc-500 hover:text-zinc-300'
                         }`}>
-                          {isSelected ? '✓ ЗАРЯЖЕН' : 'ВЫБРАТЬ'}
+                          {isSelected ? t('chargedRocket') : t('selectRocketAction')}
                         </div>
                       ) : (
                         <div className="text-[11px] font-black bg-zinc-800 text-zinc-300 py-1.5 rounded-lg border border-zinc-750 font-mono">
-                          {r.price} КР.
+                          {r.price} {t('creditsSuffix').toUpperCase()}
                         </div>
                       )}
                     </div>
@@ -228,14 +234,14 @@ export default function HangarScreen({
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in">
             <div className="bg-zinc-950 border border-zinc-800 rounded-3xl p-6 w-full max-w-xs text-center shadow-2xl bento-glow-indigo">
               <span className="text-4xl">🔐</span>
-              <h3 className="text-lg font-black text-zinc-100 mt-2">МАНЕВРЫ {passwordModal.name}</h3>
-              <p className="text-xs text-zinc-400 mt-1 mb-4 font-mono">Выкупите за <span className="text-yellow-400 font-extrabold">{passwordModal.price} кр.</span> или введите код:</p>
+              <h3 className="text-lg font-black text-zinc-100 mt-2">{t('passcodeModalTitle')} {passwordModal.name}</h3>
+              <p className="text-xs text-zinc-400 mt-1 mb-4 font-mono">{t('passcodeModalDesc', { price: passwordModal.price })}</p>
 
               <input
                 type="text"
                 value={passwordInput}
                 onChange={e => setPasswordInput(e.target.value)}
-                placeholder="Код доступа..."
+                placeholder={t('passcodePlaceholder')}
                 className="w-full text-center py-2 px-3 bg-zinc-900 border border-zinc-800 rounded-xl text-zinc-100 outline-none focus:border-indigo-500 mb-2 font-mono"
                 onKeyDown={e => {
                   if (e.key === 'Enter') submitPassword();
@@ -249,20 +255,20 @@ export default function HangarScreen({
                   onClick={submitDirectBuy}
                   className="w-full text-xs py-2 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-extrabold rounded-lg cursor-pointer transition font-mono uppercase"
                 >
-                  Купить за {passwordModal.price} КР
+                  {t('buyWithCreditsBtn', { price: passwordModal.price })}
                 </button>
                 <button
                   onClick={submitPassword}
                   className="w-full text-xs py-2 bg-indigo-600 hover:bg-indigo-550 text-white font-extrabold rounded-lg cursor-pointer transition font-mono uppercase"
                 >
-                  Ввести код
+                  {t('enterCodeBtn')}
                 </button>
               </div>
               <button
                 onClick={() => setPasswordModal(null)}
                 className="w-full mt-2 text-xs py-2 bg-zinc-900 border border-zinc-800 hover:bg-zinc-800 text-zinc-400 rounded-lg cursor-pointer transition font-mono uppercase"
               >
-                Отмена
+                {t('cancel')}
               </button>
             </div>
           </div>

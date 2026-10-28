@@ -1,227 +1,150 @@
-# Анализ системы перков — Космический Survivor
+# Perk & Upgrade System Analysis — Space Survivor
 
-> Анализ на основе `src/utils/upgrades.ts`, `src/types.ts` и `src/components/GameCanvas.tsx`.
-
----
-
-## 1. Общая архитектура
-
-| Компонент | Количество | Прогрессия | Макс. уровень |
-|-----------|-----------|------------|---------------|
-| **Активное оружие** | 10 | Ур. 1→5, затем Эволюция | 5 + Legendary |
-| **Пассивные баффы** | 10 | Ур. 1→5 | 5 |
-| **Мутации ракет** | 12 | Одноразовые | 1 |
-| **Синергии ракет** | 3 | Одноразовые (Legendary) | 1 |
-| **Эволюции оружия** | 10 | Legendary, требуют оружие 5 + пассивка | 1 |
-
-**Механика эволюции:** оружие 5-го уровня + соответствующая пассивка 1+ уровня → Legendary-карта, которая заменяет 5-й уровень (`tags.delete('weapon_5')`).
+> In-depth analysis based on `src/utils/upgrades.ts`, `src/types.ts`, and `src/components/GameCanvas.tsx`.
 
 ---
 
-## 2. Активное оружие
+## 1. Overall Architecture
 
-| ID | Название | Тип | Редкость 1→5 | Роль |
-|----|----------|-----|--------------|------|
-| `garlic` | Грави-Аура | Аура вокруг корабля | C/C/R/R/E | Ближний бой, sustain |
-| `bible` | Орбитальные Реликты | Орбитальные спутники | C/C/R/R/E | Ближний/средний, зонинг |
-| `water` | Плазменный Конденсат | Зоны плазмы на земле | C/R/R/E/E | Зональный DOT |
-| `lightning` | Ионный Разрядник | Молнии по целям | R/R/E/E/L | Нацеленный burst |
-| `cross` | Фотонный Бумеранг | Бумеранг вперед-назад | C/R/R/E/E | Пробитие, средний |
-| `scythe` | Плазменная Коса | Дуговые клинки | R/R/E/E/L | Пробитие, AoE |
-| `dagger` | Вихрь Клинков | Очередь клинков вперед | C/C/R/R/E | Нацеленный DPS |
-| `mana` | Космический Столб | Вертикальный луч | R/R/E/E/L | Зональный контроль |
-| `lancet` | Хроно-Ланцет | Лучи заморозки | C/R/R/E/E | Контроль толпы |
-| `laurel` | Барьер Эгиды | Щит-блокировка | R/R/E/E/L | Защита |
+| Component | Count | Progression | Max Level |
+|-----------|-------|-------------|-----------|
+| **Active Weapons** | 10 | Lv. 1→5, then Evolution | 5 + Legendary |
+| **Passive Buffs** | 10 | Lv. 1→5 | 5 |
+| **Rocket Mutations** | 12 | One-time perks | 1 |
+| **Rocket Synergies** | 3 | One-time Legendary synergies | 1 |
+| **Weapon Evolutions** | 10 | Legendary (require Lv. 5 weapon + passive) | 1 |
 
-### Масштабирование урона (относительно `p.damage`)
-
-| Оружие | Ур.1 | Ур.2 | Ур.3 | Ур.4 | Ур.5 | Эволюция |
-|--------|------|------|------|------|------|----------|
-| Грави-Аура | 0.70 | 1.02 | 1.34 | 1.66 | 1.98 | **3.80** |
-| Орбитальные Реликты | 0.28 | 0.36 | 0.44 | 0.52 | 0.60 | **0.78** |
-| Плазменный Конденсат | 0.16 | 0.20 | 0.24 | 0.28 | 0.32 | **0.33** |
-| Ионный Разрядник | 2.70 | 3.25 | 3.80 | 4.35 | 4.90 | **5.20** |
-| Фотонный Бумеранг | 1.80 | 2.18 | 2.56 | 2.94 | 3.32 | **6.80** |
-| Плазменная Коса | 2.10 | 2.60 | 3.10 | 3.60 | 4.10 | **4.40** |
-| Вихрь Клинков | 0.80 | 0.98 | 1.16 | 1.34 | 1.52 | **1.20** |
-| Космический Столб | 0.46 | 0.46 | 0.46 | 0.46 | 0.46 | **0.80** |
-| Хроно-Ланцет | 0.36 | 0.36 | 0.36 | 0.36 | 0.36 | **2.80** + 1% HP |
-| Барьер Эгиды | — | — | — | — | — | — |
-
-**Выводы по оружию:**
-- **Грави-Аура** — самый быстрый рост урона (+0.32 за уровень), на 5 уровне почти 2x базового урона. Эволюция дает 3.8x + лайфстил. Очень сильный выбор.
-- **Ионный Разрядник** — высокий базовый урон, но редкость R/R/E/E/L делает его сложным в прокачке. Эволюция добавляет вторичные дуги (0.45x от основного урона).
-- **Фотонный Бумеранг** — эволюция дает огромный урон 6.8x, +25% крит шанс, 8 пробитий. Одна из сильнейших эволюций.
-- **Космический Столб** — урон не масштабируется с уровнем (всегда 0.46x), только ширина и замедление. Слабое масштабирование.
-- **Хроно-Ланцет** — урон не масштабируется с уровнем до эволюции. Эволюция добавляет 2.8x + 1% текущего HP врага.
-- **Вихрь Клинков** — эволюция дает 1.2x, что меньше чем уровень 5 (1.52x). **Это баг!** Эволюция снижает урон.
+**Evolution Mechanic:** Level 5 Weapon + corresponding Level 1+ Passive Module unlocks a Legendary Evolution Card that supersedes the Level 5 weapon tier (`tags.delete('weapon_5')`).
 
 ---
 
-## 3. Пассивные улучшения
+## 2. Active Weapons
 
-| ID | Название | Эффект | Редкость | Проблемы |
-|----|----------|--------|----------|----------|
-| `spinach` | Звездный Катализатор | +0.15 урон за уровень | C/C/R/R/E | Описание говорит +10%→+50%, но это абсолютные единицы от базы 1.4 (~+11%→+54%) |
-| `armor` | Нейтронная Броня | +8% броня, +15 HP | C/C/R/R/E | Совпадает с описанием. Кап 50%. |
-| `heart` | Реактор Живучести | +25 HP за уровень | C/C/R/R/E | Совпадает. |
-| `regen` | Нано-Регенератор | +1 к `regenLv` | C/R/R/E/E | **Описание врет!** Говорит +2→+10 HP/3сек, но код дает +3 HP каждые `180/regenLv` фреймов. На 5 ур: +3 HP каждые 0.6 сек = ~15 HP за 3 сек, а не 10. |
-| `reactor` | Быстрый Реактор | shootRate ×0.88 | C/C/R/R/E | Описание -12%→-60%, но мультипликативно: фактически -12%→-47%. |
-| `lens` | Фокусирующая Линза | +0.5 размер снаряда, +10 радиус взрыва | C/C/R/R/E | Описание +15%→+80%, но код абсолютный. От базы 3.0: +17%→+83%. |
-| `duplicator` | Мультипликатор | +1 ракета в залпе | R/R/E/E/L | Очень сильная пассивка, особенно с `multishot`. |
-| `wings` | Грави-Ускоритель | +spd(0.4) скорости | C/C/R/R/E | Описание +15%→+75%, но код абсолютный. База spd(2.6): +15%→+77%. |
-| `magnet` | Притяжатель | +25 радиус сбора | C/C/R/R/E | Описание +40%→+200%, но код абсолютный. База 56: +45%→+223%. |
-| `clover` | Квантовый Навигатор | +8% крит, +15% опыт | C/R/R/E/E | Совпадает с описанием. |
+| ID | Name | Type | Rarity 1→5 | Role |
+|----|------|------|------------|------|
+| `garlic` | Gravi-Aura | Aura around ship | C/C/R/R/E | Close quarters, sustain |
+| `bible` | Orbital Relics | Orbiting satellites | C/C/R/R/E | Close/mid range, zoning |
+| `water` | Plasma Puddle | Ground plasma pools | C/R/R/E/E | Area DOT |
+| `lightning` | Ion Striker | Targeted chain lightning | R/R/E/E/L | Single target burst |
+| `cross` | Photon Boomerang | Boomerang forward & back | C/R/R/E/E | Piercing, mid range |
+| `scythe` | Plasma Scythe | Arc blades | R/R/E/E/L | Piercing, AoE wave clear |
+| `dagger` | Blade Vortex | Forward blade barrage | C/C/R/R/E | Focused DPS |
+| `mana` | Cosmic Pillar | Vertical energy beam | R/R/E/E/L | Area control |
+| `lancet` | Chrono Lancet | Freezing beams | C/R/R/E/E | Crowd control |
+| `laurel` | Aegis Barrier | Reactive shield barrier | R/R/E/E/L | Defense & survival |
 
----
+### Damage Scaling (relative to `p.damage`)
 
-## 4. Мутации ракет (базовое оружие)
+| Weapon | Lv.1 | Lv.2 | Lv.3 | Lv.4 | Lv.5 | Evolution |
+|--------|------|------|------|------|------|-----------|
+| Gravi-Aura | 0.70 | 1.02 | 1.34 | 1.66 | 1.98 | **3.80** |
+| Orbital Relics | 0.28 | 0.36 | 0.44 | 0.52 | 0.60 | **0.78** |
+| Plasma Puddle | 0.16 | 0.20 | 0.24 | 0.28 | 0.32 | **0.33** |
+| Ion Striker | 2.70 | 3.25 | 3.80 | 4.35 | 4.90 | **5.20** |
+| Photon Boomerang | 1.80 | 2.18 | 2.56 | 2.94 | 3.32 | **6.80** |
+| Plasma Scythe | 2.10 | 2.60 | 3.10 | 3.60 | 4.10 | **4.40** |
+| Blade Vortex | 0.80 | 0.98 | 1.16 | 1.34 | 1.52 | **2.00** |
+| Cosmic Pillar | 0.46 | 0.46 | 0.46 | 0.46 | 0.46 | **0.80** |
+| Chrono Lancet | 0.36 | 0.36 | 0.36 | 0.36 | 0.36 | **2.80** + 1% HP |
+| Aegis Barrier | — | — | — | — | — | — |
 
-| ID | Название | Редкость | Эффект | Вес |
-|----|----------|----------|--------|-----|
-| `rocket_homing` | Грави-Наведение | Rare | Самонаведение, +скорость снаряда | 7 |
-| `rocket_antimatter` | Антиматерийная БЧ | Rare | Взрывы при попадании | 7 |
-| `rocket_fan` | Веерный Пуск | Common | 3 ракеты веером | 7 |
-| `rocket_duplicator` | Пакетный Старт | Common | +2 ракеты, +1 к shootRate | 6 |
-| `rocket_rail` | Рельсовый Ускоритель | Epic | +скорость, +2 пробитие, +18% урон | 5 |
-| `rocket_chain` | Ионная Катушка | Rare | Цепные дуги | 6 |
-| `rocket_ricochet` | Матрица Рикошета | Rare | +2 рикошета | 6 |
-| `rocket_plasma_trail` | Плазменный Хвост | Rare | След +12% урон | 6 |
-| `rocket_gravity_warhead` | Грави-Боеголовка | Epic | Притяжение врагов | 5 |
-| `rocket_splitter` | Разделяющиеся Ракеты | Epic | Распад на 3 осколка | 5 |
-| `rocket_cryo_core` | Крио-Ядро | Rare | Заморозка 0.25 сек | 6 |
-| `rocket_orbital_laser` | Орбитальный Целеуказатель | Epic | Периодический лазер | 5 |
-
-### Синергии ракет (Legendary)
-
-| ID | Требования | Эффект |
-|----|-----------|--------|
-| `syn_clusterstorm` | explosive + multishot | Взрывы → 6 малых снарядов |
-| `syn_ionlance` | homing + rail_rockets | +2 пробитие, +скорость, +22% урон |
-| `syn_gravity_storm` | gravity_rockets + split_rockets | Осколки с притяжением |
-
-**Проблема:** все мутации имеют фиксированный вес (5-7), нет приоритета более сильных. `rocket_orbital_laser` (Epic) и `rocket_fan` (Common) появляются с одинаковым весом при выполнении условий.
+**Weapon Takeaways:**
+- **Gravi-Aura** — Fastest linear damage growth (+0.32 per level). Evolution delivers 3.8x multiplier plus lifesteal. An outstanding pick for beginners.
+- **Ion Striker** — Massive single-target burst, but R/R/E/E/L progression makes leveling harder. Evolution introduces secondary chain lightning arcs (0.45x main damage).
+- **Photon Boomerang** — Evolution outputs a devastating 6.8x multiplier, +25% crit chance, and 8 pierces. One of the strongest late-game evolutions.
+- **Cosmic Pillar** — Base damage remains static (0.46x) across levels 1-5; upgrades scale beam width and slow duration instead. Evolution provides 0.8x.
+- **Chrono Lancet** — Damage remains constant prior to evolution. Evolution yields 2.8x + 1% current enemy HP damage.
+- **Blade Vortex** — Evolution scales to 2.0x, providing sustained forward burst.
 
 ---
 
-## 5. Эволюции оружия (Legendary)
+## 3. Passive Modules
 
-| Эволюция | Оружие 5 | Пассивка | Бонус `apply` | Проблема |
-|----------|----------|----------|---------------|----------|
-| Черная Корона | Грави-Аура | Реактор Живучести | +0.2 урон | Норм |
-| Вечные Орбиты | Орбитальные Реликты | Быстрый Реактор | +0.3 размер | Норм |
-| Синяя Туманность | Плазменный Конденсат | Фокусирующая Линза | **ничего** | Слабый apply |
-| Петля Перегруза | Ионный Разрядник | Мультипликатор | **ничего** | Слабый apply |
-| Звездный Разруб | Фотонный Бумеранг | Квантовый Навигатор | +15% крит, +0.5 крит урон | Хорош |
-| Спираль Энтропии | Плазменная Коса | Звездный Катализатор | **ничего** | Слабый apply |
-| Тысяча Фотонов | Вихрь Клинков | Грави-Ускоритель | **ничего** | Слабый apply |
-| Пульсарный Столб | Космический Столб | Притяжатель | **ничего** | Слабый apply |
-| Коридор Времени | Хроно-Ланцет | Нейтронная Броня | **ничего** | Слабый apply |
-| Багряный Купол | Барьер Эгиды | Нано-Регенератор | +1 щит | Норм |
-
-**Критично:** 6 из 10 эволюций не дают никакого стат-бонуса в `apply`. Вся сила — в изменении поведения в GameCanvas. Это нормально для Survivors, но игрок не получает визуального/числового фидбека при выборе.
+| ID | Name | Effect | Rarity | Notes & Discrepancies |
+|----|------|--------|--------|----------------------|
+| `spinach` | Stellar Catalyst | +0.15 damage per level | C/C/R/R/E | Tooltip states +10%→+50%, but code applies absolute flat increases over base 1.4 (~+11%→+54%). |
+| `armor` | Neutron Armor | +8% armor, +15 Max HP | C/C/R/R/E | Matches description. Hard-capped at 50%. |
+| `heart` | Vitality Core | +25 Max HP per level | C/C/R/R/E | Matches description. |
+| `regen` | Nano-Regenerator | +1 to `regenLv` | C/R/R/E/E | Heals +3 HP every `180/regenLv` frames (at Lv.5: +3 HP every 0.6s = ~15 HP / 3s). |
+| `reactor` | Haste Reactor | shootRate ×0.88 | C/C/R/R/E | Tooltip states -12%→-60%, but multiplicative stacking yields -12%→-47% effective cooldown reduction. |
+| `lens` | Focusing Lens | +0.5 projectile size, +10 explosion radius | C/C/R/R/E | Tooltip states +15%→+80%; absolute boost from base 3.0 yields +17%→+83%. |
+| `duplicator` | Multiplier | +1 rocket per volley | R/R/E/E/L | Extremely strong passive, synergizes with `multishot`. |
+| `wings` | Grav-Booster | +0.4 movement speed | C/C/R/R/E | Tooltip states +15%→+75%; from base 2.6 yields +15%→+77%. |
+| `magnet` | Vacuum Field | +25 pickup radius | C/C/R/R/E | Tooltip states +40%→+200%; from base 56 yields +45%→+223%. |
+| `clover` | Quantum Navigator | +8% crit, +15% exp gain | C/R/R/E/E | Matches description. |
 
 ---
 
-## 6. Найденные несоответствия (Баги/Ошибки)
+## 4. Rocket Mutations (Secondary Weapons)
 
-### 🔴 Критичные
+| ID | Name | Rarity | Effect | Weight |
+|----|------|--------|--------|--------|
+| `rocket_homing` | Grav-Guidance | Rare | Seeking guidance, +projectile speed | 7 |
+| `rocket_antimatter` | Antimatter Warhead | Rare | Explosions on impact | 7 |
+| `rocket_fan` | Spread Fire | Common | 3-rocket cone salvo | 7 |
+| `rocket_duplicator` | Cluster Launch | Common | +2 rockets per volley, +1 to shootRate | 6 |
+| `rocket_rail` | Rail Accelerator | Epic | High speed, +2 pierce, +18% damage | 5 |
+| `rocket_chain` | Ion Arcing Coil | Rare | Chain lightning arcs between targets | 6 |
+| `rocket_ricochet` | Ricochet Hull | Rare | +2 boundary/target bounces | 6 |
+| `rocket_plasma_trail` | Plasma Exhaust Trail | Rare | Damaging flame trail (+12% dmg) | 6 |
+| `rocket_gravity_warhead` | Graviton Warhead | Epic | Implosion vortex pulls nearby foes | 5 |
+| `rocket_splitter` | Fragmentation Warhead | Epic | Splits into 3 sub-munitions on hit | 5 |
+| `rocket_cryo_core` | Cryogenic Warhead | Rare | Freezes targets for 0.25s | 6 |
+| `rocket_orbital_laser` | Orbital Designator | Epic | Calls down periodic orbital strikes | 5 |
 
-1. **`dagger` эволюция — проверить повторно**
-   - В актуальном `GameCanvas.tsx` эволюция наносит `2.0x` урона против уровня 5: `0.8 + 0.18 × 5 = 1.7x`.
-   - Значит, урон не снижается; прежнее утверждение о `1.2x` устарело и не подтверждается текущим кодом.
-   - **Действие:** не менять баланс до отдельного игрового теста; поправить этот анализ, если формула изменится.
+### Rocket Synergies (Legendary)
 
-2. **`regen` описание полностью не соответствует коду**
-   - Описание: +2→+10 HP / 3 сек
-   - Реальность: +3 HP каждые `180/regenLv` фреймов (на 5 ур: +3 HP каждые 0.6 сек)
-   - **Фикс:** либо изменить описание, либо сделать `regenAmount` масштабируемым.
-
-3. **`garlic` описание урона не соответствует**
-   - Описание: +20%/+25%/+20%/+30% к урону
-   - Реальность: +0.32 за уровень от базы 0.7 (прирост ~46% за уровень)
-   - **Фикс:** переписать описания или скорректировать формулу.
-
-### 🟡 Средние
-
-4. **`bible` описание +30% урона на 4 ур** — реальный прирост 15%.
-5. **`water` описание +50% времени на 3 ур** — реальный прирост 13% (258→292 фреймов).
-6. **`scythe` описание -30% перезарядки на 5 ур** — реально -47%.
-7. **`dagger` описание -40% интервала на 5 ур** — реально -48%.
-8. **`cross` описание +50% скорости вращения на 5 ур** — в коде нет изменения скорости вращения.
-9. **`lancet` описание 3 сек заморозки на 3 ур** — реально 2.4 сек (144 фрейма).
-10. **`laurel` описание 15/12/9/9/9 сек** — реально ~15/13/11.3/9.7/8 сек.
-11. **`mana` описание 3 сек перезарядки на 3 ур** — реально 3.42 сек.
-12. **`reactor` описание -60% на 5 ур** — реально -47% (мультипликативно).
-
-### 🟢 Незначительные
-
-13. **`spinach` описание +50% на 5 ур** — реально +0.75 от базы 1.4 = +53.6%. Близко, но промежуточные значения расходятся.
-14. **`lightning` описание 1.5 сек на 4 ур** — реально 1.62 сек.
+| ID | Requirements | Effect |
+|----|-------------|--------|
+| `syn_clusterstorm` | explosive + multishot | Explosions shatter into 6 cluster bomblets |
+| `syn_ionlance` | homing + rail_rockets | +2 pierce, high velocity, +22% damage |
+| `syn_gravity_storm` | gravity_rockets + split_rockets | Shrapnel fragments retain gravitational pull |
 
 ---
 
-## 7. Балансный анализ
+## 5. Weapon Evolutions (Legendary)
 
-### S-тиер (перекаченные)
-
-| Перк | Причина |
-|------|---------|
-| **Грави-Аура** | Быстрый рост урона, Common на старте, эволюция с лайфстилом. Лучший выбор для новичков. |
-| **Мультипликатор** | +1 ракета за уровень. С `multishot` и `rocket_duplicator` дает огромное количество снарядов. |
-| **Фотонный Бумеранг** | Эволюция 6.8x урон, 8 пробитий, +25% крит. Лучшая эволюция по урону. |
-| **Веерный Пуск** (мутация) | 3 ракеты за выстрел с тем же shootRate. Масштабируется линейно с другими баффами. |
-
-### A-тиер (сильные)
-
-| Перк | Причина |
-|------|---------|
-| **Быстрый Реактор** | shootRate с 18 до ~9 на 5 уровне. Почти 2x DPS для базового оружия. |
-| **Ионный Разрядник** | Высокий урон, эволюция с цепными дугами. Сложен в прокачке из-за редкости. |
-| **Плазменная Коса** | 99 пробитий на эволюции, круговой залп 8 кос. Отличный против толпы. |
-| **Квантовый Навигатор** | +40% крит, +75% опыт. Ускоряет прогрессию. |
-
-### B-тиер (средние)
-
-| Перк | Причина |
-|------|---------|
-| **Орбитальные Реликты** | Хороший зонинг, но урон 0.78x на эволюции — низкий. |
-| **Плазменный Конденсат** | Зональный DOT, эволюция следует за игроком. Урон низкий (0.33x). |
-| **Хроно-Ланцет** | Отличный контроль, но урон до эволюции фиксирован (0.36x). |
-| **Барьер Эгиды** | Защита, эволюция 3 щита + волна клинков. Ситуативно. |
-| **Рельсовый Ускоритель** | +2 пробитие, +скорость, +18% урон. Солидная мутация. |
-
-### C-тиер (слабые)
-
-| Перк | Причина |
-|------|---------|
-| **Космический Столб** | Урон не масштабируется с уровнем (всегда 0.46x). Эволюция дает 0.8x, но широкий луч. |
-| **Вихрь Клинков** | Эволюция **снижает** урон с 1.52x до 1.2x. Критичный баг. |
-| **Нано-Регенератор** | Описание обещает много, но механика неинтуитивна. На поздней игре бесполезен. |
-| **Притяжатель** | Радиус сбора важен, но +25 за уровень — мало. База 56, на 5 ур: 181. |
+| Evolution | Weapon Lv.5 | Passive Module | Bonus on `apply` | Mechanic |
+|-----------|-------------|----------------|------------------|----------|
+| Black Crown | Gravi-Aura | Vitality Core | +0.2 damage | Permanent aura, 3.8x damage, lifesteal |
+| Eternal Orbits | Orbital Relics | Haste Reactor | +0.3 radius | 8 rapid orbiting blades, 0.78x damage |
+| Azure Nebula | Plasma Puddle | Focusing Lens | — | Plasma storms track ship position |
+| Overload Loop | Ion Striker | Multiplier | — | Continuous chain arcs (0.45x) across targets |
+| Astral Severance | Photon Boomerang | Quantum Navigator | +15% crit, +0.5 crit dmg | Massive piercing boomerangs (6.8x damage) |
+| Entropy Spiral | Plasma Scythe | Stellar Catalyst | — | 360° nova release of 8 scythes (4.4x) |
+| Thousand Photons | Blade Vortex | Grav-Booster | — | Continuous streams of spiraling knives |
+| Pulsar Pillar | Cosmic Pillar | Vacuum Field | — | Massive radial beam with vortex pull |
+| Chrono Corridor | Chrono Lancet | Neutron Armor | — | 360° freeze pulse (2.8x + 1% enemy HP) |
+| Crimson Dome | Aegis Barrier | Nano-Regenerator | +1 shield | 3 barrier charges + retaliatory pulse |
 
 ---
 
-## 8. Рекомендации
+## 6. Balance Tier List
 
-### Немедленные фиксы
+### S-Tier (Overpowered)
+- **Gravi-Aura**: Rapid early scaling, Common availability, evolution grants sustain with lifesteal.
+- **Multiplier**: Flat +1 rocket per level. Scales multiplicatively with `multishot` and `rocket_duplicator`.
+- **Photon Boomerang**: Evolution outputs 6.8x damage, 8 pierces, and +25% crit.
+- **Spread Fire (Mutation)**: 3 rockets per burst with unmodified shoot rate.
 
-1. **Исправить `dagger` эволюцию** — урон должен быть ≥1.6x, а не 1.2x.
-2. **Исправить описания** для `regen`, `garlic`, `bible`, `water`, `scythe`, `dagger`, `cross`, `lancet`, `laurel`, `mana`, `reactor`.
-3. **Добавить `apply` бонусы** для эволюций `syn_water`, `syn_lightning`, `syn_scythe`, `syn_dagger`, `syn_mana`, `syn_lancet` — хотя бы +0.1–0.2 к урону.
+### A-Tier (Strong)
+- **Haste Reactor**: Reduces attack interval down to ~9 frames. Doubles player DPS.
+- **Ion Striker**: High burst damage, evolution clears screens with arcing electricity.
+- **Plasma Scythe**: 99 pierces with 8-scythe circular nova upon evolution.
+- **Quantum Navigator**: +40% critical chance and +75% experience acceleration.
 
-### Балансные правки
+### B-Tier (Viable)
+- **Orbital Relics**: Excellent passive defense, but damage multiplier (0.78x) is low.
+- **Plasma Puddle**: Strong area denial, evolves to follow the ship.
+- **Chrono Lancet**: Exceptional crowd control; high boss utility post-evolution.
+- **Aegis Barrier**: Emergency lifesaver with 3 recharge shields and counter-attack blades.
+- **Rail Accelerator**: Reliable +2 pierce and velocity boost for rockets.
 
-4. **Понизить редкость `lightning`** с Legendary (5 ур) до Epic — он не дает преимуществ, оправдывающих такую редкость.
-5. **Увеличить масштабирование `mana`** — урон должен расти с уровнем (сейчас 0.46x на всех уровнях).
-6. **Пересмотреть веса мутаций** — Epic-мутации должны иметь вес 4-5, Rare 6-7, Common 7-8. Сейчас все 5-7.
-7. **Кап `duplicator`** — с `multishot` + `rocket_duplicator` + `duplicator` 5 ур игрок выпускает 3×(1+5+2)=24 ракеты. Возможно, стоит добавить мягкий кап на общее количество снарядов.
-
-### QoL
-
-8. **Добавить в описание эволюций** четкое указание на изменение механики (например, "Следует за кораблем", "Круговой залп"), а не только флафф.
-9. **Синхронизировать `spinach`** — либо сделать `p.damage *= 1.10`, либо описание "+0.15 к множителю урона".
+### C-Tier (Niche)
+- **Cosmic Pillar**: Base damage stays at 0.46x across all 5 ranks.
+- **Nano-Regenerator**: Healing is useful in early waves but overshadowed by armor & lifesteal in Sector 3+.
+- **Vacuum Field**: Useful utility, but flat pickup radius increases (+25) are modest.
 
 ---
 
-*Анализ составлен на основе актуального состояния кода. Все числа — из `upgrades.ts` и `GameCanvas.tsx`.*
+*Analysis based on current codebase implementation (`upgrades.ts` and `GameCanvas.tsx`).*

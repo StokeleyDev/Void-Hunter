@@ -4,6 +4,15 @@
  */
 
 import { Upgrade, Player } from '../types';
+import {
+  Language,
+  getCurrentGlobalLanguage,
+  getWeaponTranslation,
+  getPassiveTranslation,
+  getRocketMutationTranslation,
+  getSynergyTranslation,
+  getFallbackTranslation,
+} from '../i18n';
 
 // Helper function for speed scaling based on viewport size
 export function spd(v: number): number {
@@ -955,7 +964,7 @@ export interface ActivePerkInfo {
   isEvolved?: boolean;
 }
 
-export function getPlayerBuild(player: Player): {
+export function getPlayerBuild(player: Player, lang: Language = getCurrentGlobalLanguage()): {
   weapons: ActivePerkInfo[];
   passives: ActivePerkInfo[];
   rocketPerks: { id: string; name: string }[];
@@ -964,9 +973,10 @@ export function getPlayerBuild(player: Player): {
   for (const w of WEAPONS_META) {
     const lv = getWeaponLevel(player, w.id);
     if (lv > 0) {
+      const trans = getWeaponTranslation(w.id, lang);
       weapons.push({
         id: w.id,
-        name: w.name,
+        name: trans?.name || w.name,
         level: lv === 6 ? 5 : lv,
         maxLevel: 5,
         isEvolved: lv === 6,
@@ -978,9 +988,10 @@ export function getPlayerBuild(player: Player): {
   for (const p of PASSIVES_META) {
     const lv = getWeaponLevel(player, p.id);
     if (lv > 0) {
+      const trans = getPassiveTranslation(p.id, lang);
       passives.push({
         id: p.id,
-        name: p.name,
+        name: trans?.name || p.name,
         level: lv === 6 ? 5 : lv,
         maxLevel: 5,
       });
@@ -990,12 +1001,97 @@ export function getPlayerBuild(player: Player): {
   const rocketPerks: { id: string; name: string }[] = [];
   for (const r of ROCKET_MUTATIONS) {
     if (r.onceTag && player.tags.has(r.onceTag)) {
+      const trans = getRocketMutationTranslation(r.id, lang);
       rocketPerks.push({
         id: r.id,
-        name: r.name,
+        name: trans?.name || r.name,
       });
     }
   }
 
   return { weapons, passives, rocketPerks };
+}
+
+export function getLocalizedUpgrade(
+  upgrade: Upgrade,
+  lang: Language = getCurrentGlobalLanguage(),
+  player?: Player
+): {
+  name: string;
+  desc: string;
+  statDelta?: string;
+  synergyReqs?: { text: string; met: boolean }[];
+} {
+  // 1. Weapon/Passive upgrade: format id is `<baseId>_<level>`
+  const match = upgrade.id.match(/^([a-z0-9]+)_([1-5])$/);
+  if (match) {
+    const [, baseId, lvStr] = match;
+    const lv = parseInt(lvStr, 10);
+    const wTr = getWeaponTranslation(baseId, lang);
+    if (wTr) {
+      const levelSuffix = lang === 'ru' ? 'Ур.' : 'Lv.';
+      const desc = wTr.descriptions[lv - 1] || upgrade.desc;
+      return {
+        name: `${wTr.name} (${levelSuffix} ${lv})`,
+        desc,
+        statDelta: desc,
+      };
+    }
+    const pTr = getPassiveTranslation(baseId, lang);
+    if (pTr) {
+      const levelSuffix = lang === 'ru' ? 'Ур.' : 'Lv.';
+      const desc = pTr.descriptions[lv - 1] || upgrade.desc;
+      return {
+        name: `${pTr.name} (${levelSuffix} ${lv})`,
+        desc,
+        statDelta: desc,
+      };
+    }
+  }
+
+  // 2. Rocket Mutation
+  const rTr = getRocketMutationTranslation(upgrade.id, lang);
+  if (rTr) {
+    return {
+      name: rTr.name,
+      desc: rTr.desc,
+      statDelta: upgrade.statDelta,
+    };
+  }
+
+  // 3. Synergy
+  const sTr = getSynergyTranslation(upgrade.id, lang);
+  if (sTr) {
+    let synergyReqs: { text: string; met: boolean }[] | undefined = undefined;
+    if (upgrade.synergyReqs && player) {
+      const originalReqs = upgrade.synergyReqs.map(reqFn => reqFn(player));
+      synergyReqs = originalReqs.map((orig, idx) => ({
+        text: sTr.reqs[idx] || orig.text,
+        met: orig.met,
+      }));
+    }
+    return {
+      name: sTr.name,
+      desc: sTr.desc,
+      statDelta: upgrade.statDelta,
+      synergyReqs,
+    };
+  }
+
+  // 4. Fallback
+  const fbTr = getFallbackTranslation(upgrade.id, lang);
+  if (fbTr) {
+    return {
+      name: fbTr.name,
+      desc: fbTr.desc,
+      statDelta: fbTr.statDelta,
+    };
+  }
+
+  return {
+    name: upgrade.name,
+    desc: upgrade.desc,
+    statDelta: upgrade.statDelta,
+    synergyReqs: upgrade.synergyReqs && player ? upgrade.synergyReqs.map(r => r(player)) : undefined,
+  };
 }

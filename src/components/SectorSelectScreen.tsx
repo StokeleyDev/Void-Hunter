@@ -4,8 +4,9 @@
  */
 
 import React from 'react';
-import { SectorConfig, SECTORS } from '../types';
+import { SectorConfig, SECTORS, getLocalizedSector } from '../types';
 import { BossIcon } from '../utils/icons';
+import { useI18n } from '../i18n';
 
 interface SectorSelectScreenProps {
   unlockedSectors: string[];
@@ -22,6 +23,8 @@ export default function SectorSelectScreen({
   onLaunchSector,
   onClose,
 }: SectorSelectScreenProps) {
+  const { t, language } = useI18n();
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center vh-safe-area bg-black/85 backdrop-blur-md vh-fade-in overflow-y-auto">
       <div className="relative w-full max-w-4xl vh-panel p-5 sm:p-7 text-slate-100 max-h-[92vh] flex flex-col shadow-2xl">
@@ -31,11 +34,11 @@ export default function SectorSelectScreen({
             <div className="flex items-center gap-3">
               <span className="text-2xl">🌌</span>
               <h2 className="text-2xl sm:text-3xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-indigo-400">
-                СЕКТОРЫ ГАЛАКТИКИ
+                {t('sectorsTitle')}
               </h2>
             </div>
             <p className="text-xs sm:text-sm text-slate-400 mt-1">
-              Выберите звёздную систему экспедиции. Уничтожьте Флагман сектора, чтобы открыть новые рубежи и награды.
+              {t('sectorsDesc')}
             </p>
           </div>
           <button
@@ -48,7 +51,8 @@ export default function SectorSelectScreen({
 
         {/* Sectors Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-6 overflow-y-auto pr-1">
-          {SECTORS.map((sec, idx) => {
+          {SECTORS.map((rawSec, idx) => {
+            const sec = getLocalizedSector(rawSec, language);
             const isUnlocked = unlockedSectors.includes(sec.id);
             const isSelected = selectedSectorId === sec.id;
 
@@ -87,11 +91,11 @@ export default function SectorSelectScreen({
                     {/* Multiplier / Status badge */}
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20">
-                        💰 x{sec.creditMultiplier} кр.
+                        💰 x{sec.creditMultiplier} {t('creditsSuffix')}
                       </span>
                       {!isUnlocked && (
                         <span className="text-xs font-semibold px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20">
-                          🔒 Заблокирован
+                          🔒 {t('lockedBadge')}
                         </span>
                       )}
                     </div>
@@ -111,7 +115,7 @@ export default function SectorSelectScreen({
                         {sec.name}
                         {isSelected && isUnlocked && (
                           <span className="text-xs font-semibold text-cyan-400 tracking-normal border border-cyan-500/40 px-2 py-0.5 rounded-md bg-cyan-950/50">
-                            Выбран
+                            {t('selectedBadge')}
                           </span>
                         )}
                       </h3>
@@ -125,14 +129,14 @@ export default function SectorSelectScreen({
                 {/* Details & Target */}
                 <div className="mt-4 pt-3 border-t border-slate-800/80 space-y-2">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-400">Цель вызова Босса:</span>
+                    <span className="text-slate-400">{t('targetScoreLabel')}</span>
                     <span className="font-mono font-bold text-sky-300">
-                      {sec.targetScore.toLocaleString()} очков
+                      {sec.targetScore.toLocaleString()} {t('pointsSuffix')}
                     </span>
                   </div>
 
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-400">Флагман Сектора:</span>
+                    <span className="text-slate-400">{t('flagshipLabel')}</span>
                     <span className="font-semibold text-rose-300 flex items-center gap-1">
                       ⚠️ {sec.bossName}
                     </span>
@@ -141,12 +145,12 @@ export default function SectorSelectScreen({
                   {/* Reward Preview */}
                   <div className="mt-2 p-2.5 rounded-lg bg-black/40 border border-slate-800 flex items-center justify-between text-xs">
                     <span className="text-slate-400 flex items-center gap-1.5">
-                      <span>🏆</span> Трофей:
+                      <span>🏆</span> {t('trophyLabel')}
                     </span>
                     <span className="font-medium text-amber-300 text-right">
-                      +{sec.reward.credits} кр.
-                      {sec.reward.skinName && ` • Скин «${sec.reward.skinName}»`}
-                      {sec.reward.rocketSkinName && ` • Ракета «${sec.reward.rocketSkinName}»`}
+                      +{sec.reward.credits} {t('creditsSuffix')}
+                      {sec.reward.skinName && ` • ${sec.reward.skinName}`}
+                      {sec.reward.rocketSkinName && ` • ${sec.reward.rocketSkinName}`}
                     </span>
                   </div>
                 </div>
@@ -165,11 +169,11 @@ export default function SectorSelectScreen({
                           : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
                       }`}
                     >
-                      {isSelected ? '🚀 В Бой!' : 'Выбрать Сектор'}
+                      {isSelected ? t('launchSector') : t('selectSector')}
                     </button>
                   ) : (
                     <div className="w-full py-2 px-4 rounded-xl bg-slate-900 border border-slate-800 text-center text-xs text-slate-500">
-                      Пройдите {SECTORS[idx - 1]?.name || 'предыдущий сектор'} для разблокировки
+                      {t('previousSectorUnlock', { sector: getLocalizedSector(SECTORS[idx - 1], language)?.name || '' })}
                     </div>
                   )}
                 </div>
@@ -180,12 +184,12 @@ export default function SectorSelectScreen({
 
         {/* Footer */}
         <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-xs text-slate-500">
-          <span>Совет: на более сложных секторах множитель золота выше!</span>
+          <span>{t('sectorHint')}</span>
           <button
             onClick={onClose}
             className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors font-semibold"
           >
-            Назад в меню
+            {t('back')}
           </button>
         </div>
       </div>

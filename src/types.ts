@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { Language, getCurrentGlobalLanguage, getSectorTranslation, getSkinTranslation, getRocketSkinTranslation } from './i18n';
+
 export interface Skin {
   id: string;
   name: string;
@@ -472,6 +474,41 @@ export const SECTORS: SectorConfig[] = [
     },
   },
 ];
+
+export function getLocalizedSector(sector: SectorConfig, lang: Language = getCurrentGlobalLanguage()): SectorConfig {
+  const trans = getSectorTranslation(sector.id, lang);
+  if (!trans) return sector;
+  return {
+    ...sector,
+    name: trans.name,
+    subtitle: trans.subtitle,
+    desc: trans.desc,
+    bossTitle: trans.bossTitle,
+  };
+}
+
+export function getLocalizedSectors(lang: Language = getCurrentGlobalLanguage()): SectorConfig[] {
+  return SECTORS.map(s => getLocalizedSector(s, lang));
+}
+
+export function getLocalizedSkin(skin: Skin, lang: Language = getCurrentGlobalLanguage()): Skin {
+  const trans = getSkinTranslation(skin.id, lang);
+  if (!trans) return skin;
+  return {
+    ...skin,
+    name: trans.name,
+  };
+}
+
+export function getLocalizedRocketSkin(skin: RocketSkin, lang: Language = getCurrentGlobalLanguage()): RocketSkin {
+  const trans = getRocketSkinTranslation(skin.id, lang);
+  if (!trans) return skin;
+  return {
+    ...skin,
+    name: trans.name,
+    desc: trans.desc,
+  };
+}
 
 export interface MetaState {
   bankCredits: number;
