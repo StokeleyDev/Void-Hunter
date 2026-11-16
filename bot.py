@@ -1,7 +1,7 @@
 import json
 import os
 import re
-import urllib.parse
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -18,6 +18,7 @@ MAX_SCORE = 2_000_000_000
 MAX_WAVE = 100_000
 
 bot = telebot.TeleBot(BOT_TOKEN)
+leaderboard_lock = threading.Lock()
 
 
 def load_leaderboard():
@@ -78,6 +79,15 @@ def send_game(message):
             btn_browser = types.InlineKeyboardButton("🌐 Open in Browser", url=GAME_URL)
             btn_top = types.InlineKeyboardButton("🏆 Leaderboard", callback_data="show_top")
             markup.add(btn_webapp, btn_browser, btn_top)
+            # Reply-keyboard WebApp button: the only launch mode where Telegram.WebApp.sendData()
+            # works, so scores submitted from it arrive with a Telegram-verified sender id.
+            ranked_kb = types.ReplyKeyboardMarkup(resize_keyboard=True)
+            ranked_kb.add(types.KeyboardButton("🏆 Ranked run", web_app=types.WebAppInfo(url=GAME_URL)))
+            bot.send_message(
+                message.chat.id,
+                "Use the 🏆 Ranked run button below to have your score saved to the leaderboard.",
+                reply_markup=ranked_kb,
+            )
             bot.send_message(
                 message.chat.id,
                 "🌌 **VOID HUNTER** — Space Roguelite Bullet-Heaven!\n\n"
@@ -104,12 +114,8 @@ def launch_game(call):
             show_top_callback(call)
             return
 
-        user_id = call.from_user.id
-        chat_id = call.message.chat.id if call.message else user_id
-        name = urllib.parse.quote(call.from_user.first_name or 'Player')
-        url = f"{GAME_URL}?uid={user_id}&cid={chat_id}&name={name}"
-        res = bot.answer_callback_query(call.id, url=url)
-        log_event(f"🎮 answer_callback_query result={res}, user={call.from_user.first_name} (id: {user_id}), url={url}")
+        res = bot.answer_callback_query(call.id, url=GAME_URL)
+        log_event(f"🎮 answer_callback_query result={res}, user id: {call.from_user.id}")
     except Exception as e:
         log_event(f"❌ launch_game callback error: {e}")
         try:
@@ -118,73 +124,62 @@ def launch_game(call):
             log_event(f"❌ Secondary answer_callback_query error: {e2}")
 
 
+def format_top(limit=10):
+    with leaderboard_lock:
+        entries = list(leaderboard.values())
+    if not entries:
+        return None
+    entries.sort(key=lambda x: (x['wave'], x['score']), reverse=True)
+    medals = ["🥇", "🥈", "🥉"]
+    lines = ["🏆 Leaderboard:", ""]
+    for i, entry in enumerate(entries[:limit]):
+        medal = medals[i] if i < 3 else f"{i+1}."
+        lines.append(f"{medal} {entry['name']} — {entry['score']} pts (wave {entry['wave']})")
+    return "\n".join(lines)
+
+
 def show_top_callback(call):
-    if not leaderboard:
+    text = format_top()
+    if not text:
         bot.answer_callback_query(call.id, "📊 No records yet!", show_alert=True)
         return
-    sorted_lb = sorted(leaderboard.values(), key=lambda x: (x['wave'], x['score']), reverse=True)
-    text = "🏆 Leaderboard:\n\n"
-    medals = ["🥇", "🥈", "🥉"]
-    for i, entry in enumerate(sorted_lb[:10]):
-        medal = medals[i] if i < 3 else f"{i+1}."
-        text += f"{medal} {entry['name']} — {entry['score']} pts (wave {entry['wave']})\n"
-    bot.send_message(call.message.chat.id, text)
+    bot.send_message(call.message.chat.id if call.message else call.from_user.id, text)
     bot.answer_callback_query(call.id)
 
 
-@bot.message_handler(func=lambda message: message.text and message.text.startswith('__'))
-def handle_game_messages(message):
-    text = message.text
+@bot.message_handler(commands=['top'])
+def send_top(message):
+    bot.send_message(message.chat.id, format_top() or "📊 No records yet!")
 
-    # Game result handling
-    if text.startswith('__score__'):
-        try:
-            # Format: __score__uid|name|score|wave
-            parts = text.replace('__score__', '').split('|')
-            uid = int(parts[0])
-            name = re.sub(r"[\x00-\x1f|]", "", urllib.parse.unquote(parts[1]))[:40].strip() or "Player"
-            score = int(parts[2])
-            wave = int(parts[3])
-            if uid <= 0 or not 0 <= score <= MAX_SCORE or not 0 <= wave <= MAX_WAVE:
-                raise ValueError("Score out of permitted range")
 
-            # Client-submitted results are validated for format/range, not cryptographically verified.
-            if uid not in leaderboard or wave > leaderboard[uid]['wave'] or (wave == leaderboard[uid]['wave'] and score > leaderboard[uid]['score']):
-                leaderboard[uid] = {
-                    'uid': uid,
-                    'name': name,
-                    'score': score,
-                    'wave': wave
-                }
+@bot.message_handler(content_types=['web_app_data'])
+def handle_web_app_data(message):
+    """Score submitted via Telegram.WebApp.sendData(). The sender id comes from Telegram, not the client."""
+    try:
+        payload = json.loads(message.web_app_data.data)
+        if not isinstance(payload, dict):
+            raise ValueError("payload must be an object")
+        score, wave = int(payload["score"]), int(payload["wave"])
+        if not 0 <= score <= MAX_SCORE or not 0 <= wave <= MAX_WAVE:
+            raise ValueError("Score out of permitted range")
+        user = message.from_user
+        uid = user.id
+        name = re.sub(r"[\x00-\x1f]", "", user.first_name or "")[:40].strip() or "Player"
+
+        # Sender identity is verified by Telegram; score values are still client-reported.
+        with leaderboard_lock:
+            prev = leaderboard.get(uid)
+            improved = prev is None or (wave, score) > (prev['wave'], prev['score'])
+            if improved:
+                leaderboard[uid] = {'uid': uid, 'name': name, 'score': score, 'wave': wave}
                 save_leaderboard()
-                print(f"Score saved: wave {wave}, {score} points")
-        except Exception as e:
-            print(f"❌ Score processing error: {e}")
-
-    # Leaderboard request
-    elif text.startswith('__get_leaderboard__'):
-        try:
-            requesting_uid = None
-            if len(text) > len('__get_leaderboard__'):
-                try:
-                    requesting_uid = int(text.replace('__get_leaderboard__', ''))
-                except:
-                    pass
-
-            leaderboard_data = []
-            for entry in leaderboard.values():
-                leaderboard_data.append({
-                    'uid': entry['uid'],
-                    'name': entry['name'],
-                    'wave': entry['wave'],
-                    'score': entry['score']
-                })
-
-            response_text = f"__leaderboard__{json.dumps(leaderboard_data)}"
-            bot.send_message(message.chat.id, response_text)
-            print(f"📊 Leaderboard sent ({len(leaderboard_data)} players)")
-        except Exception as e:
-            print(f"❌ Leaderboard dispatch error: {e}")
+            elif prev['name'] != name:
+                prev['name'] = name
+                save_leaderboard()
+        log_event(f"Score from {uid}: wave {wave}, {score} pts (new best: {improved})")
+        bot.send_message(message.chat.id, f"✅ Result received: {score} pts, wave {wave}" + (" — new personal best!" if improved else ""))
+    except Exception as e:
+        log_event(f"❌ web_app_data error: {e}")
 
 
 def on_updates(updates):
