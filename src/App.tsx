@@ -15,6 +15,7 @@ import { Sound } from './utils/sound';
 import { Music } from './utils/music';
 import { PerkIcon, ShipIcon, RocketIcon, BossIcon } from './utils/icons';
 import { useI18n } from './i18n';
+import { canSubmitScore, submitScore } from './utils/telegram';
 
 export default function App() {
   const { t, language, setLanguage, toggleLanguage } = useI18n();
@@ -768,7 +769,7 @@ export default function App() {
                     </div>
                     <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden">
                       <div
-                        className="bg-gradient-to-r from-indigo-500 to-cyan-400 h-full rounded-full transition-all duration-500"
+                        className="bg-indigo-400 h-full rounded-full transition-all duration-500"
                         style={{ width: `${Math.min(100, Math.max(5, (unlockedSynergies.length / TOTAL_SYNERGIES_COUNT) * 100))}%` }}
                       />
                     </div>
@@ -849,22 +850,26 @@ export default function App() {
                     ? 'text-sky-400'
                     : 'text-slate-400';
 
-                const borderLeftColor =
-                  u.synergy || u.id.startsWith('syn_')
-                    ? 'border-l-amber-400 bg-amber-500/[0.04]'
-                    : u.rar === 'Legendary'
-                    ? 'border-l-amber-400'
-                    : u.rar === 'Epic'
-                    ? 'border-l-purple-400'
-                    : u.rar === 'Rare'
-                    ? 'border-l-sky-400'
-                    : 'border-l-slate-600';
+                // Rarity is shown as a full thin outline (inline style: .vh-panel is unlayered CSS and
+                // would override Tailwind border utilities). Synergies also get a faint warm fill.
+                const isSynergyCard = u.synergy || u.id.startsWith('syn_');
+                const rarityRgb =
+                  isSynergyCard || u.rar === 'Legendary' ? '251, 191, 36'
+                  : u.rar === 'Epic' ? '192, 132, 252'
+                  : u.rar === 'Rare' ? '56, 189, 248'
+                  : '100, 116, 139';
+                const rarityStyle: React.CSSProperties = {
+                  borderColor: `rgba(${rarityRgb}, 0.45)`,
+                  boxShadow: isSynergyCard || u.rar === 'Legendary' ? `inset 0 0 24px rgba(${rarityRgb}, 0.08)` : undefined,
+                  backgroundColor: isSynergyCard ? 'rgba(245, 158, 11, 0.04)' : undefined,
+                };
 
                 return (
                   <div
                     key={u.id}
                     onClick={() => handleSelectUpgrade(u)}
-                    className={`vh-panel vh-panel-interactive p-3 sm:p-4 cursor-pointer text-left flex items-center group relative overflow-hidden border-l-4 hover:bg-slate-900/90 ${borderLeftColor}`}
+                    className={`vh-panel vh-panel-interactive p-3 sm:p-4 cursor-pointer text-left flex items-center group relative overflow-hidden hover:bg-slate-900/90`}
+                    style={rarityStyle}
                     role="button"
                     tabIndex={0}
                     onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); handleSelectUpgrade(u); } }}
@@ -1291,10 +1296,18 @@ export default function App() {
             <div className="flex flex-col gap-2 w-full mt-6">
               <button
                 onClick={handleStartRun}
-                className="w-full py-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white text-xs font-black uppercase tracking-wider rounded-xl transition cursor-pointer font-mono"
+                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-black uppercase tracking-wider rounded-xl transition cursor-pointer font-mono"
               >
                 🔄 {t('playAgain').toUpperCase()}
               </button>
+              {canSubmitScore() && (
+                <button
+                  onClick={() => submitScore(endPayload.score, endPayload.wave)}
+                  className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 text-zinc-950 text-xs font-black uppercase tracking-wider rounded-xl transition cursor-pointer font-mono"
+                >
+                  🏆 {language === 'ru' ? 'ОТПРАВИТЬ В РЕЙТИНГ' : 'SUBMIT TO LEADERBOARD'}
+                </button>
+              )}
               <button
                 onClick={() => setActiveScreen('menu')}
                 className="w-full py-2.5 bg-zinc-800 hover:bg-zinc-750 text-zinc-300 hover:text-white text-xs font-bold uppercase tracking-wider rounded-xl transition border border-zinc-700 cursor-pointer font-mono"
