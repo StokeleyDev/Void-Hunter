@@ -108,6 +108,8 @@ export type EnemyType =
 export interface Enemy {
   x: number;
   y: number;
+  _prevHp?: number; // HP at the previous simulation step (hit detection for flash/knockback)
+  _flash?: number; // Frames of white hit-flash left
   type: EnemyType;
   hp: number;
   maxHp: number;
@@ -220,7 +222,7 @@ export interface Particle {
   r: number;
   angle?: number;
   fade?: boolean;
-  type?: 'spark' | 'smoke' | 'debris' | 'ring';
+  type?: 'spark' | 'smoke' | 'debris' | 'ring' | 'glow';
   maxLife?: number;
   spinSpd?: number;
   growth?: number;
@@ -522,6 +524,18 @@ export interface MetaState {
   unlockedSynergies: string[];
 }
 
+export interface Star {
+  x: number;
+  y: number;
+  r: number;
+  s: number; // fall speed
+  a: number; // base alpha
+  col?: string;
+  layer?: 0 | 1 | 2; // 0 = far, 1 = mid, 2 = near (parallax depth)
+  tw?: number; // twinkle speed
+  ph?: number; // twinkle phase
+}
+
 export interface GameState {
   state: 'menu' | 'playing' | 'upgrade' | 'pause' | 'stats' | 'leaderboard' | 'hangar' | 'history' | 'codex' | 'sector_select' | 'sector_victory';
   frame: number;
@@ -534,7 +548,7 @@ export interface GameState {
   runCredits: number;
   rerolls: number;
   lastUpgIds: string[];
-  stars: { x: number; y: number; r: number; s: number; a: number; col?: string }[];
+  stars: Star[];
   bullets: Bullet[];
   eBullets: EnemyBullet[];
   enemies: Enemy[];
@@ -569,6 +583,10 @@ export interface GameState {
   damageNumbers: DamageNumber[];
   superPickups: SuperPickup[];
   hitStop: number; // Frames of freeze-frame crunch on critical impacts
+  timeScale?: number; // <1 = slow motion (boss / mini-boss kill cams), eases back to 1
+  hurtFlash?: number; // Frames of red damage vignette after the player loses HP
+  deathSequence?: { x: number; y: number; r: number; col: string; t: number; left: number; boss: boolean }[]; // Chained post-death explosions
+  pendingVictory?: number; // Frames until the sector-victory screen opens (lets the boss death play out)
 
   // Interactive Sector Hazards (Stage 4)
   ionHazards?: IonHazard[];

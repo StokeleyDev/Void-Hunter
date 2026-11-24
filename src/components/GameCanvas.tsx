@@ -13,6 +13,9 @@ import { spd, getWeaponLevel } from '../utils/upgrades';
 import { SpatialHash } from '../utils/spatial-hash';
 import { compactInPlace, sampleWhere } from '../utils/array';
 import { renderFrame } from '../game/renderFrame';
+import { Bloom, BackgroundCache, getRenderScale, syncCanvasSize } from '../game/postfx';
+import { snapshotPositions, applyInterpolation, restorePositions } from '../game/interpolation';
+import { makeStars, updateJuice, startDeathSequence, recoverTimeScale } from '../game/juice';
 import { PerkIcon, BossIcon, getShipIcon, getBossIcon } from '../utils/icons';
 import { useI18n, tDirect } from '../i18n';
 
@@ -146,6 +149,10 @@ export default function GameCanvas({
     damageNumbers: [],
     superPickups: [],
     hitStop: 0,
+    timeScale: 1,
+    hurtFlash: 0,
+    deathSequence: [],
+    pendingVictory: undefined,
   });
 
   const keys = useRef<{ [key: string]: boolean }>({});
@@ -226,6 +233,10 @@ export default function GameCanvas({
       damageNumbers: [],
       superPickups: [],
       hitStop: 0,
+      timeScale: 1,
+      hurtFlash: 0,
+      deathSequence: [],
+      pendingVictory: undefined,
       player: {
         x: width / 2,
         y: height - 120,
@@ -302,18 +313,8 @@ export default function GameCanvas({
       else if (selectedSkin === 'asteroid_miner') G.current.player.col = '#fb923c';
     }
 
-    // Populate sector-themed stars
-    const starCols = activeSec.palette.starColors || ['#ffffff'];
-    for (let i = 0; i < 140; i++) {
-      G.current.stars.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        r: Math.random() * 1.5 + 0.3,
-        s: Math.random() * 0.4 + 0.1,
-        a: Math.random() * 0.7 + 0.2,
-        col: starCols[Math.floor(Math.random() * starCols.length)],
-      });
-    }
+    // Populate sector-themed parallax star field
+    G.current.stars = makeStars(width, height, activeSec.palette.starColors || ['#ffffff']);
 
     // Populate drifting asteroids for Sector 3
     if (activeSec.id === 'asteroid') {
@@ -341,16 +342,7 @@ export default function GameCanvas({
       // Warm up stars for menu background
       const width = window.innerWidth;
       const height = window.innerHeight;
-      G.current.stars = [];
-      for (let i = 0; i < 120; i++) {
-        G.current.stars.push({
-          x: Math.random() * width,
-          y: Math.random() * height,
-          r: Math.random() * 1.5 + 0.3,
-          s: Math.random() * 0.4 + 0.1,
-          a: Math.random() * 0.7 + 0.2,
-        });
-      }
+      G.current.stars = makeStars(width, height);
       G.current.state = 'menu';
     } else {
       resetRun();
@@ -497,7 +489,15 @@ export default function GameCanvas({
       Sound.play('exp_small');
     }
 
-    const isMobile = window.innerWidth < 768 || /Mobi|Android|iPhone|iPad|Telegram/i.test(navigator.userAgent);
+    const isMobile = IS_MOBILE_DEVICE;
+
+    // Bright core flash (additive glow sprite) + fast thin white shockwave
+    G.current.particles.push({
+      x, y, vx: 0, vy: 0, life: 1.0, col, r: isBoss ? 70 : isMiniboss ? 42 : 22, type: 'glow', growth: isBoss ? 1.5 : 0.6, friction: 0,
+    });
+    G.current.particles.push({
+      x, y, vx: 0, vy: 0, life: 0.7, col: '#ffffff', r: 4, type: 'ring', growth: isBoss ? 9 : isMiniboss ? 6 : 3.2, friction: 0,
+    });
 
     const ringColor = isFrozen ? '#a5f3fc' : isPoisoned ? '#10b981' : col;
     G.current.particles.push({
@@ -784,6 +784,18 @@ export default function GameCanvas({
 
   // Full logic updates
   const updateGame = (width: number, height: number) => {
+    if (G.current.pendingVictory !== undefined && G.current.pendingVictory > 0) {
+      G.current.eBullets.length = 0;
+      G.current.pendingVictory--;
+      if (G.current.pendingVictory === 0) {
+        G.current.pendingVictory = undefined;
+        G.current.state = 'sector_victory';
+        Sound.play('victory');
+        callbacksRef.current.onSectorVictory(G.current.currentSector, G.current.score, G.current.runCredits);
+        callbacksRef.current.onStateChange('sector_victory', G.current.player || undefined);
+        return;
+      }
+    }
     const p = G.current.player;
     if (!p || G.current.state !== 'playing') return;
 
@@ -2250,11 +2262,19 @@ export default function GameCanvas({
       }
     }
 
+    // Hit flashes, knockback, hit sparks, damage vignette, chained death explosions
+    updateJuice(G.current, {
+      explode: (ex, ey, col, big) => spawnExplosion(ex, ey, col, '', big, !big, false, false),
+    });
+
     // Handle dying enemies and drops
     for (const e of G.current.enemies) {
       if (e.hp <= 0 && e.hp !== -999) {
         G.current.score += e.score;
         spawnExplosion(e.x, e.y, e.col, e.type, e.boss || false, e.miniboss || false, e.frozen > 0, e.poisonTimer > 0);
+        if (e.boss || e.miniboss) {
+          startDeathSequence(G.current, e.x, e.y, e.r, e.col, !!e.boss);
+        }
 
         // Flagship Boss Defeat Handler
         if (e === G.current.sectorBoss && !G.current.bossDefeated) {
@@ -2294,14 +2314,13 @@ export default function GameCanvas({
           }
 
           if (!victoryTriggeredRef.current) {
+            // Lock in the win now (checkDeaths ignores lethal damage from here on), but let the
+            // flagship's death sequence play out before the victory screen opens.
             victoryTriggeredRef.current = true;
             G.current.bossDefeated = true;
-            G.current.state = 'sector_victory';
             G.current.eBullets = []; // clear hostile projectiles immediately so player is not hit post-victory
-            Sound.play('victory');
             Music.setBossMode(false);
-            callbacksRef.current.onSectorVictory(G.current.currentSector, G.current.score, G.current.runCredits);
-            callbacksRef.current.onStateChange('sector_victory', G.current.player || undefined);
+            G.current.pendingVictory = 75;
           }
         }
 
@@ -2679,7 +2698,7 @@ export default function GameCanvas({
     const isMobile = IS_MOBILE_DEVICE;
     const particlesSetting = callbacksRef.current.settings?.particlesLevel ?? 'high';
     const pMultiplier = particlesSetting === 'low' ? 0.35 : particlesSetting === 'medium' ? 0.65 : 1.0;
-    const maxParticles = Math.floor((isMobile ? 80 : 200) * pMultiplier);
+    const maxParticles = Math.floor((isMobile ? 180 : 520) * pMultiplier); // glow is now cheap (bloom, no shadowBlur)
     if (G.current.particles.length > maxParticles) {
       G.current.particles.splice(0, G.current.particles.length - maxParticles);
     }
@@ -2740,6 +2759,8 @@ export default function GameCanvas({
   // High fidelity canvas drawing loop (Fixed 60Hz simulation timestep)
   useEffect(() => {
     let animId: number;
+    const bloom = new Bloom();
+    const bgCache = new BackgroundCache();
     const FIXED_STEP = 1000 / 60; // 16.6667 ms per simulation step
     const MAX_DELTA = 100; // max 100ms accumulation to prevent spiral of death upon returning from tab
     let lastFrameTime = performance.now();
@@ -2757,36 +2778,33 @@ export default function GameCanvas({
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
 
-      // shadowBlur is the most expensive Canvas2D operation. Disable glow on mobile, and on
-      // desktop when the player picks the "low" particles preset (checked live on every set).
+      // shadowBlur is the most expensive Canvas2D operation and is disabled everywhere: glow now
+      // comes from the cheap bloom post-pass (postfx.ts), which also works on mobile.
       if (typeof (ctx as any)._shadowBlurPatched === 'undefined') {
         const native = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, 'shadowBlur');
-        const glowEnabled = () => !IS_MOBILE_DEVICE && callbacksRef.current.settings?.particlesLevel !== 'low';
         if (native?.get && native.set) {
           const { get, set } = native;
           Object.defineProperty(ctx, 'shadowBlur', {
             get() { return get.call(this); },
-            set(v: number) { set.call(this, glowEnabled() ? v : 0); },
+            set(_v: number) { set.call(this, 0); },
             configurable: true,
           });
         }
         (ctx as any)._shadowBlurPatched = true;
       }
 
-      // Avoid resizing the canvas buffer every frame unless width/height actually changes
-      const currentWidth = window.innerWidth;
-      const currentHeight = window.innerHeight;
-      if (canvas.width !== currentWidth || canvas.height !== currentHeight) {
-        canvas.width = currentWidth;
-        canvas.height = currentHeight;
-      }
-      const width = canvas.width;
-      const height = canvas.height;
+      // Sharp rendering on high-DPI screens: backing store = CSS size * devicePixelRatio (capped).
+      // The game itself keeps simulating and drawing in CSS pixels.
+      const quality = callbacksRef.current.settings?.particlesLevel ?? 'high';
+      const scale = getRenderScale(quality);
+      const { width, height } = syncCanvasSize(canvas, scale);
 
       // Core simulation logic (Fixed 60Hz step independent of screen refresh rate)
+      let alpha = 1;
       if (G.current.state === 'playing') {
-        accumulator += deltaTime;
+        accumulator += deltaTime * recoverTimeScale(G.current, deltaTime / FIXED_STEP);
         while (accumulator >= FIXED_STEP) {
+          snapshotPositions(G.current);
           if (G.current.hitStop > 0) {
             G.current.hitStop--;
           } else {
@@ -2794,14 +2812,27 @@ export default function GameCanvas({
           }
           accumulator -= FIXED_STEP;
         }
+        alpha = accumulator / FIXED_STEP;
       } else {
         accumulator = 0;
       }
 
-      renderFrame({
-        ctx, width, height, G, languageRef, callbacksRef,
-        shipSheet, bossSheet, pickupSheet, joyBase, joyThumb, joyActive, selectedSkin,
-      });
+      ctx.setTransform(scale, 0, 0, scale, 0, 0);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+      applyInterpolation(G.current, alpha);
+      try {
+        renderFrame({
+          ctx, width, height, G, languageRef, callbacksRef,
+          shipSheet, bossSheet, pickupSheet, joyBase, joyThumb, joyActive, selectedSkin,
+          dt: deltaTime / FIXED_STEP, scale, bgCache,
+        });
+      } finally {
+        restorePositions(G.current);
+      }
+      if (quality !== 'low') {
+        bloom.apply(ctx, quality === 'high' ? 1 : 0.75);
+      }
       animId = requestAnimationFrame(processFrame);
     };
 

@@ -2,6 +2,46 @@
 
 All notable changes to this project are documented in this file.
 
+## [1.2.0] — 2026-11-24
+
+Graphics and game-feel update. Rendering is still plain Canvas2D, so it keeps working on mobile and inside Telegram's WebView.
+
+### Added
+- **Sharp rendering on high-DPI screens.** The canvas backing store now follows `devicePixelRatio` (capped at 2× on
+  desktop with **High** particles, 1.75× otherwise, 1× on **Low**); the game still simulates in CSS pixels.
+- **Bloom.** A cheap downsample-based bloom pass (1/4, 1/8, 1/16 mip chain with a soft brightness threshold, added
+  back with additive blending) replaces `shadowBlur` glow. Disabled on **Low**.
+- **Smooth motion on 90/120/144 Hz screens.** Entities are drawn interpolated between the last two fixed 60 Hz
+  simulation steps; render-side animations (stars, asteroids, damage numbers, beams, flashes, shake) are now
+  frame-rate independent.
+- **Parallax star field.** Three star layers (dim far stars, mid stars, bright near streaks) that move at different
+  rates as the ship moves, with twinkle; a faint sector-tinted nebula haze in each sector background.
+- **Hit feedback.** Enemies flash in their own shape when hit, regular enemies get a small knockback on strong hits
+  (≥6% of max HP; bosses and mini-bosses don't move), and directional sparks fly from the impact side.
+- Red damage vignette when the player takes damage (follows the existing screen-flash setting).
+- New particles: velocity-stretched sparks, additive glow cores and a fast white shockwave ring on explosions.
+- **Boss death sequence.** Chained explosions (9 for bosses, 4 for mini-bosses) with slow motion that eases back to
+  normal speed; the sector-victory screen now opens about 1.25 s after the boss dies.
+
+### Changed
+- Camera shake uses smooth layered sine motion with slight rotation instead of a random offset every frame.
+  The shake-strength setting still applies.
+- Lightning, lasers, bullet and player trails, sparks and rings are drawn with additive (`lighter`) blending.
+- Particle cap raised from 200 to 520 on desktop and from 80 to 180 on mobile (scaled by the particles setting).
+- `shadowBlur` is now always off; glow on all platforms comes from the bloom pass.
+- The static part of each sector background (gradients, planet, nebulae) is painted once into an offscreen cache
+  instead of every frame.
+
+### Gameplay notes
+- Knockback slightly changes balance: hit enemies are pushed away from the player.
+- The boss kill counts immediately. During the short pause before the victory screen enemy bullets are cleared and
+  the player cannot die.
+
+### Internal
+- New modules: `src/game/postfx.ts` (DPR sizing, bloom, background cache), `src/game/interpolation.ts`
+  (render interpolation), `src/game/juice.ts` (stars, hit reactions, shake, death sequence, slow motion).
+  Hit effects are detected from HP changes, so weapon code is untouched.
+
 ## [1.1.0] — 2026-11-16
 
 ### Security

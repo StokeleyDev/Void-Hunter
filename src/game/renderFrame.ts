@@ -17,6 +17,8 @@ import type { Language } from '../i18n';
 
 const rnd = (a: number, b: number) => Math.random() * (b - a) + a;
 import { IS_MOBILE_DEVICE } from '../utils/device';
+import type { BackgroundCache } from './postfx';
+import { drawStars, paintNebulaHaze, applyCameraShake, glowSprite, drawHurtVignette } from './juice';
 
 type Ref<T> = MutableRefObject<T>;
 
@@ -34,21 +36,24 @@ export interface RenderFrameDeps {
   joyThumb: Ref<{ x: number; y: number }>;
   joyActive: Ref<boolean>;
   selectedSkin: string;
+  /** Elapsed time since the previous rendered frame, in 60 Hz simulation frames (1 = 16.7 ms). */
+  dt: number;
+  /** Canvas backing-store scale (devicePixelRatio, capped). */
+  scale: number;
+  bgCache: BackgroundCache;
 }
 
-export function renderFrame({
-  ctx, width, height, G, languageRef, callbacksRef,
-  shipSheet, bossSheet, pickupSheet, joyBase, joyThumb, joyActive, selectedSkin,
-}: RenderFrameDeps): void {
-  // Draw Sector-themed Space Background
-  const sec = G.current.currentSector || SECTORS[0];
+/** Static (non-animated) part of each sector backdrop — painted once into an offscreen cache. */
+function paintStaticBackground(ctx: CanvasRenderingContext2D, width: number, height: number, sec: SectorConfig) {
   const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
   bgGrad.addColorStop(0, sec.palette.bgGradientTop);
   bgGrad.addColorStop(1, sec.palette.bgGradientBottom);
   ctx.fillStyle = bgGrad;
   ctx.fillRect(0, 0, width, height);
+  paintNebulaHaze(ctx, width, height, sec.id, [
+    sec.palette.nebulaColor || sec.palette.accentColor, sec.palette.accentColor, ...(sec.palette.starColors || []),
+  ]);
 
-  // Sector-specific Celestial Background elements
   if (sec.id === 'earth') {
     // Earth horizon in background
     ctx.save();
@@ -103,12 +108,40 @@ export function renderFrame({
     ctx.arc(width * 0.75, height * 0.65, width * 0.6, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-  } else if (sec.id === 'asteroid' && G.current.asteroids) {
+  } else if (sec.id === 'singularity') {
+    const bhX = width * 0.82;
+    const bhY = height * 0.22;
+    const bhR = spd(32);
+    const diskGrad = ctx.createRadialGradient(bhX, bhY, bhR * 0.9, bhX, bhY, bhR * 3.2);
+    diskGrad.addColorStop(0, 'rgba(251, 146, 60, 0)');
+    diskGrad.addColorStop(0.25, 'rgba(244, 63, 94, 0.45)');
+    diskGrad.addColorStop(0.6, 'rgba(251, 191, 36, 0.25)');
+    diskGrad.addColorStop(1, 'transparent');
+    ctx.fillStyle = diskGrad;
+    ctx.beginPath();
+    ctx.arc(bhX, bhY, bhR * 3.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+export function renderFrame({
+  ctx, width, height, G, languageRef, callbacksRef,
+  shipSheet, bossSheet, pickupSheet, joyBase, joyThumb, joyActive, selectedSkin,
+  dt, scale, bgCache,
+}: RenderFrameDeps): void {
+  // Sector-themed space background (gradients cached offscreen; only animated parts drawn per frame)
+  const sec = G.current.currentSector || SECTORS[0];
+  ctx.drawImage(
+    bgCache.get(sec.id, width, height, scale, (c, w, h) => paintStaticBackground(c, w, h, sec)),
+    0, 0, width, height,
+  );
+
+  if (sec.id === 'asteroid' && G.current.asteroids) {
     // Drifting background asteroids
     ctx.save();
     for (const ast of G.current.asteroids) {
-      ast.y += ast.spd;
-      ast.rot += ast.rotSpd;
+      ast.y += ast.spd * dt;
+      ast.rot += ast.rotSpd * dt;
       if (ast.y > height + 50) {
         ast.y = -50;
         ast.x = Math.random() * width;
@@ -142,16 +175,7 @@ export function renderFrame({
     const bhY = height * 0.22;
     const bhR = spd(32);
     const time = G.current.frame * 0.02;
-
-    const diskGrad = ctx.createRadialGradient(bhX, bhY, bhR * 0.9, bhX, bhY, bhR * 3.2);
-    diskGrad.addColorStop(0, 'rgba(251, 146, 60, 0)');
-    diskGrad.addColorStop(0.25, 'rgba(244, 63, 94, 0.45)');
-    diskGrad.addColorStop(0.6, 'rgba(251, 191, 36, 0.25)');
-    diskGrad.addColorStop(1, 'transparent');
-    ctx.fillStyle = diskGrad;
-    ctx.beginPath();
-    ctx.arc(bhX, bhY, bhR * 3.2, 0, Math.PI * 2);
-    ctx.fill();
+    // (accretion-disk gradient is part of the cached static background)
 
     ctx.save();
     ctx.translate(bhX, bhY);
@@ -175,29 +199,19 @@ export function renderFrame({
     ctx.restore();
   }
 
-  // Camera screen shake calculations
+  // Smooth camera shake (layered sines + slight roll)
   ctx.save();
   const shakeFactor = callbacksRef.current.settings?.shakeIntensity ?? 1.0;
-  if (G.current.screenShake > 0.1 && G.current.state === 'playing') {
-    const shakeX = (Math.random() * 2 - 1) * G.current.screenShake * shakeFactor;
-    const shakeY = (Math.random() * 2 - 1) * G.current.screenShake * shakeFactor;
-    ctx.translate(shakeX, shakeY);
-    G.current.screenShake *= 0.9;
+  if (G.current.state === 'playing') {
+    applyCameraShake(ctx, G.current, width, height, shakeFactor, dt);
   }
 
-  // Draw background stars with sector colors
-  for (const s of G.current.stars) {
-    s.y += s.s * 1.5;
-    if (s.y > height) {
-      s.y = 0;
-      s.x = Math.random() * width;
-    }
-    ctx.fillStyle = s.col || `rgba(255, 255, 255, ${s.a})`;
-    ctx.globalAlpha = s.a;
-    ctx.beginPath();
-    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  // Parallax star field: layers drift at different speeds and follow the ship's position
+  const camP = G.current.player;
+  drawStars(
+    ctx, G.current.stars, width, height, dt, G.current.frame,
+    camP ? camP.x - width / 2 : 0, camP ? camP.y - height / 2 : 0,
+  );
   ctx.globalAlpha = 1;
 
   // Render Sector Hazards (Stage 4)
@@ -386,6 +400,7 @@ export function renderFrame({
         const alpha = Math.min(0.75, beam.life / 28);
         ctx.translate(beam.x, beam.y);
         ctx.rotate(beam.ang);
+        ctx.globalCompositeOperation = 'lighter';
         ctx.globalAlpha = alpha;
         ctx.strokeStyle = beam.evolved ? '#e0f2fe' : '#93c5fd';
         ctx.shadowColor = beam.evolved ? '#bfdbfe' : '#60a5fa';
@@ -625,6 +640,7 @@ export function renderFrame({
         for (const beam of G.current.laserBeams) {
           const alphaCheck = beam.life / 12;
           ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
           ctx.globalAlpha = alphaCheck * 0.75;
           ctx.strokeStyle = '#ffee00';
           ctx.lineWidth = 4 * alphaCheck;
@@ -633,7 +649,7 @@ export function renderFrame({
           ctx.lineTo(beam.x + Math.cos(beam.ang) * 1200, beam.y + Math.sin(beam.ang) * 1200);
           ctx.stroke();
           ctx.restore();
-          beam.life--;
+          beam.life -= dt;
         }
         compactInPlace<any>(G.current.laserBeams, b => b.life > 0);
       }
@@ -641,6 +657,7 @@ export function renderFrame({
       // Lightning bolt arcs - rendered as stunning procedural jagged electrical currents
       for (const bolt of G.current.lightningBolts) {
         ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
         ctx.strokeStyle = bolt.col;
         ctx.lineWidth = 2.5 * (bolt.life / 12) + 0.6;
         ctx.shadowColor = bolt.col;
@@ -670,11 +687,12 @@ export function renderFrame({
         ctx.lineTo(bolt.x2, bolt.y2);
         ctx.stroke();
         ctx.restore();
-        bolt.life--;
+        bolt.life -= dt;
       }
       compactInPlace<LightningBolt>(G.current.lightningBolts, b => b.life > 0);
 
       // Ship hulls trail
+      ctx.globalCompositeOperation = 'lighter';
       for (let i = 0; i < p.trail.length; i++) {
         const tr = p.trail[i];
         ctx.fillStyle = p.col;
@@ -684,6 +702,7 @@ export function renderFrame({
         ctx.fill();
         ctx.globalAlpha = 1.0;
       }
+      ctx.globalCompositeOperation = 'source-over';
 
       // Draw player starship (using high-res sprite sheet when ready, fallback to procedural)
       if (shipSheet.current && shipSheet.current.complete) {
@@ -718,6 +737,7 @@ export function renderFrame({
     // Draw dynamic rocket projectiles and their high-fidelity flame tails
     for (const b of G.current.bullets) {
       // Draw rocket hull trail (smoke plumes & fading fires)
+      ctx.globalCompositeOperation = 'lighter';
       for (let i = 0; i < b.trail.length; i++) {
         const tr = b.trail[i];
         ctx.fillStyle = b.col;
@@ -727,6 +747,7 @@ export function renderFrame({
         ctx.fill();
         ctx.globalAlpha = 1.0;
       }
+      ctx.globalCompositeOperation = 'source-over';
 
       if (b.weaponKind) {
         ctx.save();
@@ -897,6 +918,21 @@ export function renderFrame({
         drawProceduralEnemy(ctx, e, G.current.frame);
       }
 
+      // Hit flash: redraw the enemy additively so its own shape lights up
+      if (e._flash && e._flash > 0) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = Math.min(1, e._flash / 4);
+        if (e.boss && bossSheet.current && bossSheet.current.complete) {
+          const coord = getBossIcon(G.current.currentSector?.id || 'earth');
+          const bSize = e.r * 2.5;
+          ctx.drawImage(bossSheet.current, coord.col * 418, coord.row * 418, 418, 418, e.x - bSize / 2, e.y - bSize / 2, bSize, bSize);
+        } else {
+          drawProceduralEnemy(ctx, e, G.current.frame);
+        }
+        ctx.restore();
+      }
+
       // Drawing enemy floating text, wave modifiers, or simple HP bars
       if (e.hp < e.maxHp) {
         const hBarWidth = e.r * 1.9 + 5;
@@ -907,8 +943,8 @@ export function renderFrame({
       }
     }
 
-    const isMobile = window.innerWidth < 768 || /Mobi|Android|iPhone|iPad|Telegram/i.test(navigator.userAgent);
-    const useGlow = !isMobile;
+    // Glow now comes from the bloom post-pass (see postfx.ts); shadowBlur is globally disabled.
+    const useGlow = false;
 
     // Collectible crystallite nodes
     for (const g of G.current.gems) {
@@ -937,7 +973,7 @@ export function renderFrame({
       } else {
         ctx.fillStyle = g.col;
         if (g.type === 'credit') {
-          g.spin = (g.spin || 0) + 0.1;
+          g.spin = (g.spin || 0) + 0.1 * dt;
           const sizeX = Math.abs(Math.sin(g.spin));
           ctx.translate(g.x, g.y);
           ctx.scale(sizeX, 1);
@@ -1035,6 +1071,8 @@ export function renderFrame({
         ctx.restore();
       } else {
         ctx.globalAlpha = pt.life;
+        // Additive blending: overlapping sparks/shockwaves brighten instead of covering each other
+        ctx.globalCompositeOperation = pt.type === 'smoke' ? 'source-over' : 'lighter';
         ctx.beginPath();
         if (pt.type === 'ring') {
           ctx.strokeStyle = pt.col;
@@ -1049,18 +1087,29 @@ export function renderFrame({
           ctx.fillStyle = pt.col;
           ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
           ctx.fill();
-        } else { // spark
-          ctx.fillStyle = pt.col;
-          if (useGlow) {
-            ctx.shadowColor = pt.col;
-            ctx.shadowBlur = 8 * pt.life;
+        } else if (pt.type === 'glow') {
+          // Soft additive flash (cached sprite, no per-frame gradient)
+          const gs = pt.r * 2;
+          ctx.drawImage(glowSprite(pt.col), pt.x - gs, pt.y - gs, gs * 2, gs * 2);
+        } else { // spark: stretched along its velocity
+          const v = Math.hypot(pt.vx, pt.vy);
+          if (v > 1.2) {
+            ctx.strokeStyle = pt.col;
+            ctx.lineWidth = pt.r;
+            ctx.lineCap = 'round';
+            ctx.moveTo(pt.x, pt.y);
+            ctx.lineTo(pt.x - pt.vx * 2.2, pt.y - pt.vy * 2.2);
+            ctx.stroke();
+          } else {
+            ctx.fillStyle = pt.col;
+            ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
+            ctx.fill();
           }
-          ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
-          ctx.fill();
         }
       }
     }
     ctx.globalAlpha = 1.0;
+    ctx.globalCompositeOperation = 'source-over';
     if (useGlow) {
       ctx.shadowBlur = 0;
     }
@@ -1068,10 +1117,10 @@ export function renderFrame({
     // Floating Damage Numbers rendering
     for (let i = G.current.damageNumbers.length - 1; i >= 0; i--) {
       const dn = G.current.damageNumbers[i];
-      dn.x += dn.vx;
-      dn.y += dn.vy;
-      dn.vy *= 0.93;
-      dn.life--;
+      dn.x += dn.vx * dt;
+      dn.y += dn.vy * dt;
+      dn.vy *= Math.pow(0.93, dt);
+      dn.life -= dt;
       dn.alpha = Math.max(0, dn.life / (dn.isCrit ? 45 : 30));
       if (dn.life <= 0) {
         G.current.damageNumbers.splice(i, 1);
@@ -1110,8 +1159,13 @@ export function renderFrame({
         ctx.fillRect(0, 0, width, height);
         ctx.globalAlpha = 1.0;
       }
-      G.current.screenFlash.life--;
+      G.current.screenFlash.life -= dt;
       if (G.current.screenFlash.life <= 0) G.current.screenFlash = null;
+    }
+
+    // Red edge vignette right after the player takes damage
+    if (callbacksRef.current.settings?.flashEnabled ?? true) {
+      drawHurtVignette(ctx, G.current, width, height);
     }
 
     // Virtual Touch Joystick HUD
